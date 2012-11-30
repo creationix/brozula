@@ -1,5 +1,5 @@
 var xhr = new XMLHttpRequest();
-xhr.open('GET', 'websocket.luac', true);
+xhr.open('GET', 'test.luac', true);
 xhr.responseType = 'arraybuffer';
 
 xhr.onload = function(e) {
@@ -21,99 +21,23 @@ var opcodes = ["ISLT", "ISGE", "ISLE", "ISGT", "ISEQV", "ISNEV", "ISEQS",
   "FUNCF", "IFUNCF", "JFUNCF", "FUNCV", "IFUNCV", "JFUNCV", "FUNCC", "FUNCCW"];
 
 var optypes = {
-  ISLT: "AD",
-  ISGE: "AD",
-  ISLE: "AD",
-  ISGT: "AD",
-  ISEQV: "AD",
-  ISNEV: "AD",
-  ISEQS: "AD",
-  ISNES: "AD",
-  ISEQN: "AD",
-  ISNEN: "AD",
-  ISEQP: "AD",
-  ISNEP: "AD",
-  ISTC: "AD",
-  ISFC: "AD",
-  IST: "D",
-  ISF: "D",
-  MOV: "AD",
-  NOT: "AD",
-  UNM: "AD",
-  LEN: "AD",
-  ADDVN: "ABC",
-  SUBVN: "ABC",
-  MULVN: "ABC",
-  DIVVN: "ABC",
-  MODVN: "ABC",
-  ADDNV: "ABC",
-  SUBNV: "ABC",
-  MULNV: "ABC",
-  DIVNV: "ABC",
-  MODNV: "ABC",
-  ADDVV: "ABC",
-  SUBVV: "ABC",
-  MULVV: "ABC",
-  DIVVV: "ABC",
-  MODVV: "ABC",
-  POW: "ABC",
-  CAT: "ABC",
-  KSTR: "AD",
-  KCDATA: "AD",
-  KSHORT: "AD",
-  KNUM: "AD",
-  KPRI: "AD",
-  KNIL: "AD",
-  UGET: "AD",
-  USETV: "AD",
-  USETS: "AD",
-  USETN: "AD",
-  USETP: "AD",
-  UCLO: "AD",
-  FNEW: "AD",
-  TNEW: "AD",
-  TDUP: "AD",
-  GGET: "AD",
-  GSET: "AD",
-  TGETV: "ABC",
-  TGETS: "ABC",
-  TGETB: "ABC",
-  TSETV: "ABC",
-  TSETS: "ABC",
-  TSETB: "ABC",
-  TSETM: "AD",
-  CALLM: "ABC",
-  CALL: "ABC",
-  CALLMT: "AD",
-  CALLT: "AD",
-  ITERC: "ABC",
-  ITERN: "ABC",
-  VARG: "ABC",
-  ISNEXT: "AD",
-  RETM: "AD",
-  RET: "AD",
-  RET0: "AD",
-  RET1: "AD",
-  FORI: "AD",
-  JFORI: "AD",
-  FORL: "AD",
-  IFORL: "AD",
-  JFORL: "AD",
-  ITERL: "AD",
-  IITERL: "AD",
-  JITERL: "AD",
-  LOOP: "AD",
-  ILOOP: "AD",
-  JLOOP: "AD",
-  JMP: "AD",
-  FUNCF: "A",
-  IFUNCF: "A",
-  JFUNCF: "AD",
-  FUNCV: "A",
-  IFUNCV: "A",
-  JFUNCV: "AD",
-  FUNCC: "A",
-  FUNCCW: "A"
+  ISLT: "AD", ISGE: "AD", ISLE: "AD", ISGT: "AD", ISEQV: "AD", ISNEV: "AD",
+  ISEQS: "AD", ISNES: "AD", ISEQN: "AD", ISNEN: "AD", ISEQP: "AD", ISNEP: "AD",
+  ISTC: "AD", ISFC: "AD", IST: "D", ISF: "D", MOV: "AD", NOT: "AD", UNM: "AD",
+  LEN: "AD", ADDVN: "ABC", SUBVN: "ABC", MULVN: "ABC", DIVVN: "ABC",
+  MODVN: "ABC", ADDNV: "ABC", SUBNV: "ABC", MULNV: "ABC", DIVNV: "ABC",
+  MODNV: "ABC", ADDVV: "ABC", SUBVV: "ABC", MULVV: "ABC", DIVVV: "ABC",
+  MODVV: "ABC", POW: "ABC", CAT: "ABC", KSTR: "AD", KCDATA: "AD", KSHORT: "AD",
+  KNUM: "AD", KPRI: "AD", KNIL: "AD", UGET: "AD", USETV: "AD", USETS: "AD",
+  USETN: "AD", USETP: "AD", UCLO: "AD", FNEW: "AD", TNEW: "AD", TDUP: "AD",
+  GGET: "AD", GSET: "AD", TGETV: "ABC", TGETS: "ABC", TGETB: "ABC",
+  TSETV: "ABC", TSETS: "ABC", TSETB: "ABC", TSETM: "AD", CALLM: "ABC",
+  CALL: "ABC", CALLMT: "AD", CALLT: "AD", ITERC: "ABC", ITERN: "ABC",
+  VARG: "ABC", ISNEXT: "AD", RETM: "AD", RET: "AD", RET0: "AD", RET1: "AD",
+  FORI: "AD", JFORI: "AD", FORL: "AD", IFORL: "AD", JFORL: "AD", ITERL: "AD",
+  IITERL: "AD", JITERL: "AD", LOOP: "AD", ILOOP: "AD", JLOOP: "AD", JMP: "AD",
+  FUNCF: "A", IFUNCF: "A", JFUNCF: "AD", FUNCV: "A", IFUNCV: "A", JFUNCV: "AD",
+  FUNCC: "A", FUNCCW: "A"
 }
 
 var opdecs = {
@@ -226,21 +150,16 @@ function PData(buffer, offset, length) {
   this.offset = offset;
   this.view = new Uint8Array(buffer, offset, length);
   this.phead();
-  console.log(this);
 
   // Parse the opcode instructions
   var base = this.index;
-  console.log("INDEX1", this.index);
   this.ops = new Array(this.numbc);
   for (var i = 0; i < this.numbc; i++) {
     this.index = base + i * 4;
     var opcode = opcodes[this.B()];
     this.ops[i] = optypes[opcode](this, opcode);
   }
-  console.log("INDEX2", this.index);
   this.index = base + i * 4;
-  console.log("INDEX3", this.index);
-  console.log("ops", this.ops);
 
   this.uvs = new Array(this.numuv);
   for (var i = 0; i < this.numuv; i++) {
@@ -248,7 +167,6 @@ function PData(buffer, offset, length) {
   }
 
   this.kgcs = new Array(this.numkgc);
-  console.log("INDEX4", this.index);
   for (var i = 0; i < this.numkgc; i++) {
     this.kgcs[i] = this.kgc();
   }
@@ -267,21 +185,6 @@ PData.prototype.H = Dump.prototype.H;
 PData.prototype.W = Dump.prototype.W;
 PData.prototype.U = Dump.prototype.U;
 
-PData.prototype.kgc = function () {
-  var typeIndex =this.U()
-  var type = ktypes[typeIndex] || "STR";
-  if (type === "STR") {
-      var len = typeIndex - 5;
-      console.log(this.buffer, this.offset + this.index, len);
-      var string = new Uint8Array(this.buffer, this.offset + this.index, len);
-      this.index += len;
-      console.log(String.fromCharCode.apply(null,string));
-      return string;
-  }
-  console.log("type", typeIndex, type);
-  throw new Error("TODO: Implement more...");
-}
-
 // flagsB numparamsB framesizeB numuvB numkgcU numknU numbcU [debuglenU [firstlineU numlineU]]
 PData.prototype.phead = function () {
   this.flags = this.B();
@@ -293,3 +196,52 @@ PData.prototype.phead = function () {
   this.numbc = this.U();
 };
 
+// kgctypeU { ktab | (loU hiU) | (rloU rhiU iloU ihiU) | strB* }
+PData.prototype.kgc = function () {
+  var typeIndex =this.U()
+  var type = ktypes[typeIndex] || "STR";
+  if (type === "STR") {
+      var len = typeIndex - 5;
+      var string = new Uint8Array(this.buffer, this.offset + this.index, len);
+      this.index += len;
+      return string;
+  }
+  if (type === "TAB") {
+    return this.ktab();
+  }
+  throw new Error("TODO: Implement " + type + " type.");
+};
+
+// ktab   = narrayU nhashU karray* khash
+PData.prototype.ktab = function () {
+  var narray = this.U();
+  var nhash = this.U();
+  var array = new Array(narray);
+  var keys = new Array(nhash);
+  var values = new Array(nhash);
+  for (var i = 0; i < narray; i++) {
+    array[i] = this.ktabk()
+  }
+  for (var i = 0; i < nhash; i++) {
+    keys[i] = this.ktabk();
+    values[i] = this.ktabk();
+  }
+  console.log("TAB", [array, keys, values]);
+  return [array, keys, values];
+};
+
+PData.prototype.ktabk = function () {
+  var typeIndex = this.U();
+  var type = vtypes[typeIndex] || "STR";
+  if (type === "STR") {
+      var len = typeIndex - 5;
+      var string = new Uint8Array(this.buffer, this.offset + this.index, len);
+      this.index += len;
+      return string;
+  }
+  if (type === "NIL") return null;
+  if (type === "FALSE") return false;
+  if (type === "TRUE") return true;
+  if (type === "INT") return this.U();
+  throw new Error("TODO: Implement ktabk for " + type);
+};
