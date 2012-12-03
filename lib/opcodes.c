@@ -21,7 +21,7 @@ BCDEF(BCENUM)
 #define BCENUM(name, ma, mb, mc, mt)  \
   if (i++ > 0) printf(",\n"); \
   else printf("\n"); \
-  printf("  %s: {ma: %s, mb: %s, mc: %s, mt: %s}", #name, #ma, #mb, #mc, #mt);
+  printf("  %s: {ma: \"%s\", mb: \"%s\", mc: \"%s\", mt: \"%s\"}", #name, #ma, #mb, #mc, #mt);
 BCDEF(BCENUM)
 #undef BCENUM
   printf("\n};\n");
