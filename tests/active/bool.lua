@@ -1,0 +1,6 @@
+print("true", type(true))
+print("false", type(false))
+print("nil", type(nil))
+print("0", type(0))
+print("Hello", type("Hello"))
+print("{}", type({}))
