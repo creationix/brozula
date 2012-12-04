@@ -31,6 +31,9 @@ function compile(path, callback) {
 
 function testdir(path, callback) {
   readdir(path, function (err, files) {
+    files = files.filter(function (file) {
+      return /\.lua$/.test(file);
+    });
     var index = 0;
     (function next(err) {
       if (err) return callback(err);
