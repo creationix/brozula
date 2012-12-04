@@ -43,10 +43,12 @@ function testdir(path, callback) {
       compile(fullPath, function (err, buffer) {
         if (err) return callback(err);
         var program = runproto(buffer);
-        console.log(program);
-        var fn = new Function(newstate + program);
-        var result = fn();
-        console.log(result);
+        console.error(program);
+        var fn = new Function("require", newstate + program);
+        console.error("--------------------------------------------------------------------------------");
+        var result = fn(require);
+        console.error("--------------------------------------------------------------------------------");
+        console.error("results: ", result);
         next();
       });
     }());
