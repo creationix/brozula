@@ -1,0 +1,27 @@
+{
+  "name": "brozula",
+  "version": "0.0.1",
+  "description": "Lua VM for running luajit bytecode in JavaScript",
+  "main": "brozula.js",
+  "bin": {
+    "brozula": "cli.js"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/creationix/brozula.git"
+  },
+  "keywords": [
+    "lua",
+    "vm",
+    "bytecode"
+  ],
+  "author": "Tim Caswell",
+  "license": "MIT",
+  "readmeFilename": "README.md"
+}

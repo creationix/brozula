@@ -1,1 +1,0 @@
-assert(("foo".."bar") == "foobar");
