@@ -30,7 +30,7 @@ npm install -g brozula
 
 I'll let the tool speak for itself since it's self documented:
 
-```txt
+```
 $ brozula
 Usage: brozula [OPTION...] program.lua[x]
 Brozula compiles lua files to bytecode and then executes them using a JS VM
