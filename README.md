@@ -11,6 +11,49 @@ Lua Workshop 2012 in DC.  Currently it can parse nearly all luajit bytecode and
 execute a subset of the lua language.  This is not a lua -> bytecode compiler.
 You'll need the luajit binary to do that part of the conversion.
 
+# Installing
+
+Brozula can be used as either a nodejs module or a browser library.  To see how
+to use in the browser, look at [index.html][].  To use in nodejs, use the
+`brozula` module in npm.
+
+# CLI
+
+There is a command-line-interface to brozula called `brozula` that can be
+installed by installing the npm module globally.
+
+```sh
+npm install -g brozula
+```
+
+## CLI Usage
+
+I'll let the tool speak for itself since it's self documented:
+
+```txt
+$ brozula
+Usage: brozula [OPTION...] program.lua[x]
+Brozula compiles lua files to bytecode and then executes them using a JS VM
+The lua -> luax (luajit bytecode) step is done by using luajit
+
+Examples:
+  brozula myprogram.lua
+  brozula --print myprogram.lua
+  brozula -pb myprogram.luax
+
+ Main operation mode:
+
+  -p, --print            Print the generated javascript
+  -x, --execute          Execute the generated javascript
+                         (This is the default behavior)
+
+ Operation modifiers:
+
+  -u, --uglify           Compress the generated javascript using uglify-js
+  -b, --beautify         Beautify the generated javascript using uglify-js
+  -l, --lines            Show line numbers when printing
+```
+
 ## End-to-end lua webapps.
 
 One use of this is to write end-to-end lua webapps using something like [luvit][]
@@ -63,3 +106,4 @@ engines can't make any sense out of lua code anyway.
 [luvit]: http://luvit.io/
 [moonslice]: https://github.com/creationix/moonslice-luv
 [luv]: https://github.com/creationix/luv
+[index.html]: https://github.com/creationix/brozula/blob/master/index.html
