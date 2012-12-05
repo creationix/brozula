@@ -345,9 +345,6 @@ function readproto(buffer) {
     if (def.md) {
       args.push(parseArg(def.mc, word >> 16, i));
     }
-    if (def.mt) {
-//      args.push(def.mt);
-    }
     return op;
   }
 
@@ -448,16 +445,15 @@ function compile(buffer, skipBuiltins) {
     line += ") {";
     code.push(line);
 
+    // Reserve a slow for the var line
+    var varIndex = code.length;
+    code.push(null);
     // Reserve the stack
-    var line = "  var $, $$, ";
-    for (var i = proto.numparams; i < proto.framesize; i++) {
-      if (i > proto.numparams) line += ", ";
-      line += slot(i);
-    }
-    line += ";";
-    code.push(line);
 
-    var state = {};
+    var state = {
+     need$: false,
+     need$$: false
+    };
 
     if (needBlock) {
       code.push("  var state = " + stateLabel(0) + ";");
@@ -489,6 +485,20 @@ function compile(buffer, skipBuiltins) {
     if (needBlock) {
       code.push("    }\n  }");
     }
+
+    var vars = [];
+    if (state.need$) vars.push("$");
+    if (state.need$$) vars.push("$$");
+    for (var i = proto.numparams; i < proto.framesize; i++) {
+      vars.push(slot(i));
+    }
+    if (vars.length) {
+      code[varIndex] = " var " + vars.join(", ") + ";";
+    }
+    else {
+      code[varIndex] = "";
+    }
+
 
     code.push("}\n");
   });
@@ -710,8 +720,14 @@ var generators = {
   },
   CALLM: function (a, b, c) {
     var line;
-    if (b > 1) { line = "$ = arr("; }
-    else if (b == 0) { line = "$$ = arr("; }
+    if (b > 1) {
+      line = "$ = arr(";
+      this.need$ = true;
+    }
+    else if (b == 0) {
+      line = "$$ = arr(";
+      this.need$$ = true;
+    }
     else { line = ""; }
     if (c) {
       line += slot(a) + ".apply(null, [";
@@ -743,8 +759,14 @@ var generators = {
   },
   CALL: function (a, b, c) {
     var line;
-    if (b > 1) { line = "$ = arr("; }
-    else if (b == 0) { line = "$$ = arr("; }
+    if (b > 1) {
+      line = "$ = arr(";
+      this.need$ = true;
+    }
+    else if (b == 0) {
+      line = "$$ = arr(";
+      this.need$$ = true;
+    }
     else { line = ""; }
     line += slot(a) + "(";
     for (var i = a + 1; i < a + c; i++) {
