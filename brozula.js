@@ -294,7 +294,7 @@ function readproto(buffer, protoIndex) {
   function parseArg(type, val, i) {
     switch (type) {
       case "lit": return val >>> 0;
-      case "lits": return val;
+      case "lits": return val & 0x80 ? val - 0x100 : val;
       case "pri": return val === 0 ? null : val === 1 ? false : true;
       case "num": return constants[val];
       case "str":
@@ -364,24 +364,21 @@ var builtins = (function () {
    if (Array.isArray(val)) return val.length;
    if (typeof val === "string") return val.length;
    if (typeof val === "object") return 0;
-   throw new Error("attempt to get length of " + type(val) + " value");
+   error("attempt to get length of " + type(val) + " value");
   }
 
-  function type(val) {
-    if (val === null) return ["nil"];
-    if (typeof val === "object") return ["table"];
-    return [typeof val];
+  function lt(op1, op2) {
+    // TODO: check metamethods
+    return op1 < op2;
   }
 
-  function arr(val) {
-    if (Array.isArray(val)) return val;
-    if (val === undefined) return [];
-    return [val];
+  function le(op1, op2) {
+    // TODO: check metamethods and fall through to lt
+    return op1 <= op2;
   }
 
-  function setmetatable(tab, meta) {
-    Object.defineProperty(tab, "__metatable", {value:meta});
-    return [tab];
+  function ge(op1, op2) {
+    return !lt(op1, op2);
   }
 
   function index(tab, key) {
@@ -415,10 +412,42 @@ var builtins = (function () {
     tab[key] = value;
   }
 
+  function type(val) {
+    if (val === null) return ["nil"];
+    if (typeof val === "object") return ["table"];
+    return [typeof val];
+  }
+
+  function arr(val) {
+    if (Array.isArray(val)) return val;
+    if (val === undefined) return [];
+    return [val];
+  }
+
+  function setmetatable(tab, meta) {
+    Object.defineProperty(tab, "__metatable", {value:meta});
+    return [tab];
+  }
+
+  function print() {
+    console.log(Array.prototype.join.call(arguments, "\t"));
+  }
+
+  function assert(expr, message) {
+    if (expr) return arguments;
+    error(message);
+  }
+
+  function error(message) {
+    throw message;
+  }
+
 var builtins = {
   type: type,
   setmetatable: setmetatable,
-  print: console.log.bind(console)
+  print: print,
+  assert: assert,
+  error: error
 };
 }).toString();
 builtins = builtins.substr(14, builtins.length - 15);
@@ -566,10 +595,10 @@ var generators = {
     return "if(" + slot(a) + "!==" + JSON.stringify(d) + ")";
   },
   ISTC: function (a, d) {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement ISTC");';
   },
   ISFC: function (a, d) {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement ISFC");';
   },
   IST: function (d) {
     return "if(!falsy(" + slot(d) + "))";
@@ -648,7 +677,7 @@ var generators = {
     return slot(a) + "=" + JSON.stringify(d) + ";";
   },
   KCDATA: function (a, d) {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement KCDATA");';
   },
   KSHORT: function (a, d) {
     return slot(a) + "=" + d + ";";
@@ -661,8 +690,8 @@ var generators = {
   },
   KNIL: function (a, d) {
     var line = "";
-    while (a <= d) {
-      line += slot(a) + "=null;";
+    for (var i = a; i <= d; i++) {
+      line += slot(i) + "=null;";
     }
     return line;
   },
@@ -673,19 +702,19 @@ var generators = {
     if (local) {
       return slot(a) + "=this.__proto__.closure[" + d + "]";
     }
-    throw new Error("TODO: Implement closure search");
+    return 'new Error("TODO: Implement UGET with non-local");';
   },
   USETV: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement USETV");';
   },
   USETS: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement USETS");';
   },
   USETN: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement USETN");';
   },
   USETP: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement USETP");';
   },
   UCLO: function (a, d) {
     var items = [];
@@ -732,7 +761,7 @@ var generators = {
     return "newindex(" + slot(b) + "," + c + "," + slot(a) + ");";
   },
   TSETM: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement TSETM");';
   },
   CALLM: function (a, b, c) {
     var line;
@@ -804,28 +833,28 @@ var generators = {
     return line;
   },
   CALLMT: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement CALLMT");';
   },
   CALLT: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement CALLT");';
   },
   ITERC: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement ITERC");';
   },
   ITERN: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement ITERN");';
   },
   VARG: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement VARG");';
   },
   ISNEXT: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement ISNEXT");';
   },
   RETM: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement RETM");';
   },
   RET: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement RET");';
   },
   RET0: function () {
     return "return[];";
@@ -833,65 +862,69 @@ var generators = {
   RET1: function (a) {
     return "return[" + slot(a) + "];"
   },
-  FORI: function () {
-    throw new Error("TODO: Implement me");
+  FORI: function (a, d) {
+    return slot(a + 3) + "=" + slot(a) + ";" +
+      "var cmp=" + slot(a) + "<" + slot(a+1) + "?le:ge;";
   },
   JFORI: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement JFORI");';
   },
-  FORL: function () {
-    throw new Error("TODO: Implement me");
+  FORL: function (a, d) {
+    return slot(a + 3) + "+=" + slot(a + 2) + ";" +
+      "if(cmp(" + slot(a + 3) + "," + slot(a + 1) + ")){" +
+      "state=" + stateLabel(d) + ";break;}" +
+      "else{cmp=undefined;}"
   },
-  IFORL: function () {
-    throw new Error("TODO: Implement me");
+  IFORL: function (a, d) {
+    return 'throw new Error("TODO: Implement IFORL");';
   },
   JFORL: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement JFORL");';
   },
   ITERL: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement ITERL");';
   },
   IITERL: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement IITERL");';
   },
   JITERL: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement JITERL");';
   },
   LOOP: function () {
     return "";
   },
   ILOOP: function () {
-    throw new Error("TODO: Implement me");
+    return "";
   },
   JLOOP: function () {
-    throw new Error("TODO: Implement me");
+    return "";
   },
   JMP: function (a, d) {
     return "state=" + stateLabel(d) + ";break;";
   },
   FUNCF: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement FUNCF");';
   },
   IFUNCF: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement IFUNCF");';
   },
   JFUNCF: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement JFUNCF");';
   },
   FUNCV: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement FUNCV");';
   },
   IFUNCV: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement IFUNCV");';
   },
   JFUNCV: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement JFUNCV");';
   },
   FUNCC: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement FUNCC");';
   },
   FUNCCW: function () {
-    throw new Error("TODO: Implement me");
+    return 'throw new Error("TODO: Implement FUNCCW");';
   }
 };
 
