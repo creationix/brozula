@@ -123,7 +123,6 @@ var kgcdecs = {
   TAB: function (parser) {
     var narray = parser.U();
     var nhash = parser.U();
-    var table;
     if (narray) {
       if (nhash) {
         throw new Error("TODO: implement mixed tables");
@@ -181,18 +180,6 @@ var ktabdecs = {
 var conditionals = {ISLT: true, ISGE: true, ISLE: true, ISGT: true, ISEQV: true,
   ISNEV: true, ISEQS: true, ISNES: true, ISEQN: true, ISNEN: true, ISEQP: true,
   ISNEP: true, ISTC: true, ISFC: true, IST: true, ISF: true};
-
-// Helper that tells us if a string is a valid javascript identifier
-var ident = /^[a-z_$][a-z0-9_$]*$/i;
-var reserved = { "break": true, "case": true, "catch": true, "continue": true,
-  "debugger": true, "default": true, "delete": true, "do": true, "else": true,
-  "finally": true, "for": true, "function": true, "if": true, "in": true,
-  "instanceof": true, "new": true, "return": true, "switch": true, "this": true,
-  "throw": true, "try": true, "typeof": true, "var": true, "void": true,
-  "while": true, "with  ": true };
-function isIdent(name) {
-  return !reserved[name] && ident.test(name);
-}
 
 // Used to consume bytes from a bytecode stream
 function Parser(buffer) {
