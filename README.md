@@ -101,6 +101,20 @@ Notice that even the `fact` variable name was optimized out by luajit's compiler
 Your original lua code never has to be released to the public since the JavaScript
 engines can't make any sense out of lua code anyway.
 
+Brozula converts this bytecode to JavaScript something like:
+
+```js
+(function(){function r(r){return null===r?["nil"]:"object"==typeof r?["table"]:[typeof r]}
+function t(r){return Array.isArray(r)?r:void 0===r?[]:[r]}function e(r,t){
+return Object.defineProperty(r,"__metatable",{value:t}),[r]}function n(){
+console.log(Array.prototype.join.call(arguments,"  "))}function o(r,t){
+return r?arguments:(a(t),void 0)}function a(r){throw r}function u(r){for(var e,n,o,a="0";;)
+switch(a){case"0":if(0!==r){a="5";break}return n=1,[n];case"5":return n=this.__proto__.closure[0],
+o=r-1,e=t(n(o)),n=e[0],e=void 0,n=r*n,[n];case"a":return[]}}function c(){for(var r,t="0";;)
+switch(t){case"0":r=u.bind(Object.create(this)),this.closure=[r],t="2";break;case"2":return[r]}}
+var i={type:r,setmetatable:e,print:n,assert:o,error:a};return c.apply(i,arguments)})();
+```
+
 [luvit]: http://luvit.io/
 [moonslice]: https://github.com/creationix/moonslice-luv
 [luv]: https://github.com/creationix/luv
