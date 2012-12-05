@@ -147,7 +147,7 @@ compile(filename, function (err, program) {
       }
       console.log(lines.map(function (line, i) {
         var num = (i + 1) + "";
-        return padding.substr(num.length) + num + ": " + line;
+        return "\033[34m" + padding.substr(num.length) + num + "\033[0m " + line;
       }).join("\n"));
     }
     else {
