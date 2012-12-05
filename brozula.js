@@ -288,8 +288,7 @@ function readproto(buffer, protoIndex) {
     flags: flags,
     numparams: numparams,
     framesize: framesize,
-    bcins: bcins.map(parseOpcode),
-    constants: constants
+    bcins: bcins.map(parseOpcode)
   };
 
   function parseArg(type, val, i) {
@@ -474,8 +473,9 @@ function compile(buffer, skipBuiltins) {
     // Reserve the stack
 
     var state = {
-     need$: false,
-     need$$: false
+      framesize: proto.framesize,
+      need$: false,
+      need$$: false
     };
 
     if (needBlock) {
@@ -666,8 +666,14 @@ var generators = {
     }
     return line;
   },
-  UGET: function () {
-    throw new Error("TODO: Implement me");
+  UGET: function (a, d) {
+    var local = d & 0x8000;
+    var immutable = d & 0x4000;
+    d = d & 0x3fff;
+    if (local) {
+      return slot(a) + "=this.__proto__.closure[" + d + "]";
+    }
+    throw new Error("TODO: Implement closure search");
   },
   USETV: function () {
     throw new Error("TODO: Implement me");
@@ -681,11 +687,15 @@ var generators = {
   USETP: function () {
     throw new Error("TODO: Implement me");
   },
-  UCLO: function () {
-    throw new Error("TODO: Implement me");
+  UCLO: function (a, d) {
+    var items = [];
+    for (var i = a; i < this.framesize; i++) {
+      items.push(slot(i));
+    }
+    return "this.closure = [" + items.join(",") + "];state=" + stateLabel(d) + ";break;";
   },
   FNEW: function (a, d) {
-    return slot(a) + "=" + pr(d) + ".bind(this);";
+    return slot(a) + "=" + pr(d) + ".bind(Object.create(this));";
   },
   TNEW: function (a, d) {
     var arrayn = d & 0x7ff;
