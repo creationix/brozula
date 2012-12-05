@@ -67,12 +67,14 @@ var options = nopt({
   "execute": Boolean,
   "print": Boolean,
   "uglify": Boolean,
-  "beautify": Boolean
+  "beautify": Boolean,
+  "lines": Boolean
 }, {
   "x": ["--execute"],
   "p": ["--print"],
   "u": ["--uglify"],
-  "b": ["--beautify"]
+  "b": ["--beautify"],
+  "l": ["--lines"]
 });
 
 // Default to running if not specified
@@ -103,6 +105,7 @@ if (!filename) {
     "",
     "  -u, --uglify           Compress the generated javascript using uglify-js",
     "  -b, --beautify         Beautify the generated javascript using uglify-js",
+    "  -l, --lines            Show line numbers when printing",
     ""
   ].join("\n"));
   process.exit(-1);
@@ -134,7 +137,23 @@ compile(filename, function (err, program) {
       indent_level: 2
     });
   }
-  if (options.print) console.log(program);
+  if (options.print) {
+    if (options.lines) {
+      var lines = program.split("\n");
+      var digits = Math.ceil(Math.log(lines.length) / Math.LN10);
+      var padding = "";
+      for (var i = 0; i < digits; i++) {
+        padding += "0";
+      }
+      console.log(lines.map(function (line, i) {
+        var num = (i + 1) + "";
+        return padding.substr(num.length) + num + ": " + line;
+      }).join("\n"));
+    }
+    else {
+      console.log(program);
+    }
+  }
   if (options.execute) {
     eval(program);
   }
