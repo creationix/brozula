@@ -6,10 +6,11 @@ either node.js or a browser environment.
 
 # Status
 
-This project is not done.  I just started it last weekend while I was at
+This project is not done.  I just started it while I was at
 Lua Workshop 2012 in DC.  Currently it can parse nearly all luajit bytecode and
 execute a subset of the lua language.  This is not a lua -> bytecode compiler.
-You'll need the luajit binary to do that part of the conversion.
+You'll need the luajit binary to do that part of the conversion.  [Performance][]
+seems pretty good so far in initial benchmarks.  Only time will tell how this scales.
 
 # Installing
 
@@ -26,7 +27,9 @@ installed by installing the npm module globally.
 npm install -g brozula
 ```
 
-I'll let the tool speak for itself since it's self documented:
+I'll let the tool speak for itself since it's self documented.
+
+There is also a [recording][] of using it in action.
 
 ```
 $ brozula
@@ -119,3 +122,5 @@ var i={type:r,setmetatable:e,print:n,assert:o,error:a};return c.apply(i,argument
 [moonslice]: https://github.com/creationix/moonslice-luv
 [luv]: https://github.com/creationix/luv
 [index.html]: https://github.com/creationix/brozula/blob/master/index.html
+[recording]: http://codestre.am/a0b85e026d7f63958cb5adf7c
+[Performance]: http://jsperf.com/efficient-goto
