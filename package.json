@@ -1,6 +1,6 @@
 {
   "name": "brozula",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Lua VM for running luajit bytecode in JavaScript",
   "main": "brozula.js",
   "bin": {
