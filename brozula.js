@@ -399,7 +399,7 @@ function arr(val) {
 
 var builtins = {
   type: type,
-  print: console.log
+  print: console.log.bind(console)
 };
 }).toString();
 builtins = builtins.substr(14, builtins.length - 15);

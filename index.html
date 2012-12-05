@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+  <title>Brozula Demo</title>
+</head>
+<body>
+  <p>See javascript console for output</p>
+  <script src="browser-buffer.js"></script>
+  <script src="brozula.js"></script>
+  <script>
+    function load(url, callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', url, true);
+      xhr.responseType = 'arraybuffer';
+
+      xhr.onload = function(e) {
+        var buffer = Buffer(this.response);
+        var program = brozula.compile(buffer);
+        var fn = new Function(program);
+        callback(null, fn);
+      };
+      xhr.send();
+    }
+
+    console.log("Loading jumps.luax");
+    load("tests/jumps.luax", function (err, fn) {
+      console.log("Executing jumps.luax");
+      fn();
+    });
+
+    console.log("Loading print-types.luax");
+    load("tests/print-types.luax", function (err, fn) {
+      console.log("Executing print-types.luax");
+      fn();
+    });
+
+  </script>
+</body>
+</head>
+</html>
