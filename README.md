@@ -17,7 +17,7 @@ Brozula can be used as either a nodejs module or a browser library.  To see how
 to use in the browser, look at [index.html][].  To use in nodejs, use the
 `brozula` module in npm.
 
-# CLI
+## CLI
 
 There is a command-line-interface to brozula called `brozula` that can be
 installed by installing the npm module globally.
@@ -25,8 +25,6 @@ installed by installing the npm module globally.
 ```sh
 npm install -g brozula
 ```
-
-## CLI Usage
 
 I'll let the tool speak for itself since it's self documented:
 
