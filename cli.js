@@ -86,6 +86,7 @@ if (!filename) {
   console.error([
     "Usage: brozula [OPTION...] program.lua[x]",
     "Brozula compiles lua files to bytecode and then executes them using a JS VM",
+    "The lua -> luax (luajit bytecode) step is done by using luajit",
     "",
     "Examples:",
     "  brozula myprogram.lua",
