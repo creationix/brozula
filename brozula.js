@@ -257,7 +257,7 @@ function readdump(buffer) {
 
 }
 
-function readproto(buffer) {
+function readproto(buffer, protoIndex) {
   var parser = new Parser(buffer);
 
   // flagsB numparamsB framesizeB numuvB numkgcU numknU numbcU [debuglenU [firstlineU numlineU]]
@@ -279,18 +279,17 @@ function readproto(buffer) {
     uvdata[i] = parser.H();
   }
   var constants = new Array(numkgc + numkn);
-  var childc = 0;
+  var childc = protoIndex;
   for (var i = 0; i < numkgc; i++) {
     var kgctype = parser.U();
     var type = kgctypes[kgctype] || "STR";
     if (type === "CHILD") {
-      constants[i + numkn] = childc++;
+      constants[i + numkn] = --childc;
     }
     else {
       constants[i + numkn] = kgcdecs[type](parser, kgctype);
     }
   }
-  var knum = new Array(numkn);
   for (var i = 0; i < numkn; i++) {
     constants[i] = readknum(parser);
   }
@@ -371,31 +370,68 @@ function readktabk(parser) {
 }
 
 var builtins = (function () {
-function falsy(val) {
-  return val === false || val === null;
-}
+  function falsy(val) {
+    return val === false || val === null;
+  }
 
-function length(val) {
- if (Array.isArray(val)) return val.length;
- if (typeof val === "string") return val.length;
- if (typeof val === "object") return 0;
- throw new Error("attempt to get length of " + type(val) + " value");
-}
+  function length(val) {
+   if (Array.isArray(val)) return val.length;
+   if (typeof val === "string") return val.length;
+   if (typeof val === "object") return 0;
+   throw new Error("attempt to get length of " + type(val) + " value");
+  }
 
-function type(val) {
-  if (val === null) return ["nil"];
-  if (typeof val === "object") return ["table"];
-  return [typeof val];
-}
+  function type(val) {
+    if (val === null) return ["nil"];
+    if (typeof val === "object") return ["table"];
+    return [typeof val];
+  }
 
-function arr(val) {
-  if (Array.isArray(val)) return val;
-  if (val === undefined) return [];
-  return [val];
-}
+  function arr(val) {
+    if (Array.isArray(val)) return val;
+    if (val === undefined) return [];
+    return [val];
+  }
+
+  function setmetatable(tab, meta) {
+    Object.defineProperty(tab, "__metatable", {value:meta});
+    return [tab];
+  }
+
+  function index(tab, key) {
+    if (tab.hasOwnProperty(key)) {
+      return tab[key];
+    }
+    if (tab.hasOwnProperty("__metatable")) {
+      var metamethod = tab.__metatable.__index;
+      if (metamethod) {
+        if (typeof metamethod === "function") {
+          return metamethod(tab, key);
+        }
+        if (metamethod.hasOwnProperty(key)) {
+          return metamethod[key];
+        }
+      }
+    }
+    return null;
+  }
+
+  function newindex(tab, key, value) {
+    if (tab.hasOwnProperty(key)) {
+      return tab[key] = value;
+    }
+    if (tab.hasOwnProperty("__metatable")) {
+      var metamethod = tab.__metatable.__newindex;
+      if (metamethod) {
+        return metamethod(tab, key, value);
+      }
+    }
+    tab[key] = value;
+  }
 
 var builtins = {
   type: type,
+  setmetatable: setmetatable,
   print: console.log.bind(console)
 };
 }).toString();
@@ -675,40 +711,28 @@ var generators = {
     return slot(a) + "=" + JSON.stringify(d) + ";";
   },
   GGET: function (a, d) {
-    if (isIdent(d))
-      return slot(a) + "=this." + d + "||null;";
-    else
-      return slot(a) + "=this[" + JSON.stringify(d) + "]||null;";
+    return slot(a) + "=index(this," + JSON.stringify(d) + ");";
   },
   GSET: function (a, d) {
-    if (isIdent(d))
-      return "this." + d + "=" + slot(a) + ";";
-    else
-      return "this[" + JSON.stringfy(d) + "]=" + slot(a) + ";";
+    return "newindex(this," + slot(a) + "," + JSON.stringify(d) + ");";
   },
   TGETV: function (a, b, c) {
-    return slot(a) + "=" + slot(b) + "[" + slot(c) + "]||null;";
+    return slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
   },
   TGETS: function (a, b, c) {
-    if (isIdent(c))
-      return slot(a) + "=" + slot(b) + "." + c + "||null;";
-    else
-      return slot(a) + "=" + slot(b) + "[" + JSON.stringify(c) + "]||null;";
+    return slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
   },
   TGETB: function (a, b, c) {
-    return slot(a) + "=" + slot(b) + "[" + c + "]||null;";
+    return slot(a) + "=index(" + slot(b) + "," + c + ");";
   },
   TSETV: function (a, b, c) {
-    return slot(b) + "[" + slot(c) + "]=" + slot(a) + ";";
+    return "newindex(" + slot(b) + "," + slot(c) + "," + slot(a) + ");";
   },
   TSETS: function (a, b, c) {
-    if (isIdent(c))
-      return slot(b) + "." + c + "=" + slot(a) + ";";
-    else
-      return slot(b) + "[" + JSON.stringify(c) + "]=" + slot(a) + ";";
+    return "newindex(" + slot(b) + "," + JSON.stringify(c) + "," + slot(a) + ");";
   },
   TSETB: function (a, b, c) {
-    return slot(b) + "[" + c + "]=" + slot(a) + ";";
+    return "newindex(" + slot(b) + "," + c + "," + slot(a) + ");";
   },
   TSETM: function () {
     throw new Error("TODO: Implement me");
