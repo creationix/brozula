@@ -15,7 +15,7 @@ seems pretty good so far in initial benchmarks.  Only time will tell how this sc
 # Installing
 
 Brozula can be used as either a nodejs module or a browser library.  To see how
-to use in the browser, look at [index.html][].  To use in nodejs, use the
+to use in the browser, look at [index.html][]. To use in nodejs, use the
 `brozula` module in npm.
 
 ## CLI
@@ -44,9 +44,11 @@ Examples:
 
  Main operation mode:
 
-  -p, --print            Print the generated javascript
   -x, --execute          Execute the generated javascript
                          (This is the default behavior)
+  -p, --print            Print the generated javascript
+  --serve port           Serve the current folder over HTTP auto-compiling
+                         any lua scripts requested
 
  Operation modifiers:
 
@@ -121,6 +123,6 @@ var i={type:r,setmetatable:e,print:n,assert:o,error:a};return c.apply(i,argument
 [luvit]: http://luvit.io/
 [moonslice]: https://github.com/creationix/moonslice-luv
 [luv]: https://github.com/creationix/luv
-[index.html]: https://github.com/creationix/brozula/blob/master/index.html
+[index.html]: https://github.com/creationix/brozula/blob/master/widgets/index.html
 [recording]: http://codestre.am/a0b85e026d7f63958cb5adf7c
 [Performance]: http://jsperf.com/efficient-goto
