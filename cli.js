@@ -1,47 +1,62 @@
 #!/usr/bin/env node
 var brozula = require('../brozula');
 var nopt = require("nopt");
+var execFile = require("child_process").execFile;
+var readFile = require('fs').readFile;
+var statFile = require('fs').stat;
+var pathResolve = require("path").resolve;
+var pathJoin = require("path").join;
+
+// Compile lua files to luajit on the fly with a locking queue for concurrent
+// requests.
+var queues = {};
+function luaToBytecode(path, callback) {
+  if (path in queues) {
+    return queues[path].push(callback);
+  }
+  var queue = queues[path] = [callback];
+  function callbacks(err, newpath) {
+    delete queues[path];
+    queue.forEach(function (callback) {
+      callback(err, newpath);
+    });
+  }
+  var newpath = path + "x";
+  statFile(path, function (err, stat) {
+    if (err) return callbacks(err);
+    statFile(newpath, function (err, stat2) {
+      if (err && err.code !== "ENOENT") {
+        return callbacks(err);
+      }
+      if (stat2 && stat2.mtime >= stat.mtime) {
+        return callbacks(null, newpath);
+      }
+      execFile("luajit", ["-b", path, newpath], function (err, stdout, stderr) {
+        if (err) return callbacks(err);
+        if (stderr) return callbacks(stderr);
+        callbacks(null, newpath);
+      });
+    });
+  });
+}
 
 // Compile a lua script to javascript source string
 function compile(path, callback) {
   if (/\.luax/.test(path)) {
     // Load already compiled bytecode
-    loadBytecode();
+    loadBytecode(path);
   }
   if (/\.lua$/.test(path)) {
-    // Compile lua to memory using luajit in child process
-    loadLua();
+    luaToBytecode(path, function (err, newpath) {
+      if (err) return callback(err);
+      loadBytecode(newpath);
+    });
   }
-  function loadBytecode() {
-    var readFile = require('fs').readFile;
+  function loadBytecode(path) {
     readFile(path, function (err, buffer) {
       if (err) return callback(err);
       generate(buffer);
     });
-  }
-  function loadLua() {
-    var spawn = require("child_process").spawn;
-    var child = spawn("luajit", ["-b", path, "-"]);
-    var out = [];
-    var len = 0;
-    var err = "";
-    var count = 3;
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", function (chunk) {
-      out.push(chunk);
-      len += chunk.length;
-    });
-    child.stderr.on("data", function (chunk) {
-      err += chunk;
-      throw new Error(chunk);
-    });
-    child.stdout.on("end", check);
-    child.stderr.on("end", check);
-    child.on("exit", check);
-    function check() {
-      if (--count) return;
-      generate(Buffer.concat(out, len));
-    }
   }
   function generate(buffer) {
     var program;
@@ -56,6 +71,7 @@ function compile(path, callback) {
 }
 
 var options = nopt({
+  "serve": Number,
   "execute": Boolean,
   "print": Boolean,
   "uglify": Boolean,
@@ -69,84 +85,124 @@ var options = nopt({
   "l": ["--lines"]
 });
 
-// Default to running if not specified
-if (options.execute === undefined && !options.print) {
-  options.execute = true;
+if (options.serve) {
+  if (options.serve === 1) options.serve = 8080;
+  var urlParse = require('url').parse;
+  var base = process.cwd();
+  var send = require('send');
+  console.log("BASE", base);
+  var server = require('http').createServer(function (req, res) {
+    var url = urlParse(req.url);
+    if (url.pathname === "/brozula.js") {
+      return send(req, pathJoin(__dirname, "/brozula.js")).pipe(res);
+    }
+    if (url.pathname === "/browser-buffer.js") {
+      return send(req, pathJoin(__dirname, "/browser-buffer.js")).pipe(res);
+    }
+    var path = pathJoin(base, url.pathname);
+    console.log(req.method, path);
+    if (/\.luax$/.test(path)) {
+      luaToBytecode(path.substr(0, path.length - 1), function (err, path) {
+        if (err) {
+          if (err.code === "ENOENT") {
+            res.statusCode = 404;
+            return res.end();
+          }
+          res.statusCode = 500;
+          return res.end(err.stack);
+        }
+        send(req, path).pipe(res);
+      });
+      return;
+    }
+    send(req, path).pipe(res);
+  });
+  server.listen(options.serve, function () {
+    console.log("Serving server listening at", server.address());
+  });
 }
+else {
 
-var filename = options.argv.remain[0];
-
-if (!filename) {
-  console.error([
-    "Usage: brozula [OPTION...] program.lua[x]",
-    "Brozula compiles lua files to bytecode and then executes them using a JS VM",
-    "The lua -> luax (luajit bytecode) step is done by using luajit",
-    "",
-    "Examples:",
-    "  brozula myprogram.lua",
-    "  brozula --print myprogram.lua",
-    "  brozula -pb myprogram.luax",
-    "",
-    " Main operation mode:",
-    "",
-    "  -p, --print            Print the generated javascript",
-    "  -x, --execute          Execute the generated javascript",
-    "                         (This is the default behavior)",
-    "",
-    " Operation modifiers:",
-    "",
-    "  -u, --uglify           Compress the generated javascript using uglify-js",
-    "  -b, --beautify         Beautify the generated javascript using uglify-js",
-    "  -l, --lines            Show line numbers when printing",
-    ""
-  ].join("\n"));
-  process.exit(-1);
-}
-
-var pathResolve = require("path").resolve;
-
-filename = pathResolve(process.cwd(), filename);
-compile(filename, function (err, program) {
-  if (err) throw err;
-  program = "(function () {\n\n" + program + "\n\n}());";
-  if (options.uglify) {
-    var UglifyJS = require("uglify-js");
-    var toplevel_ast = UglifyJS.parse(program);
-    toplevel_ast.figure_out_scope();
-    var compressor = UglifyJS.Compressor({});
-    var compressed_ast = toplevel_ast.transform(compressor);
-    compressed_ast.figure_out_scope();
-    compressed_ast.compute_char_frequency();
-    compressed_ast.mangle_names();
-    program = compressed_ast.print_to_string({});
+  // Default to running if not specified
+  if (options.execute === undefined && !options.print) {
+    options.execute = true;
   }
-  if (options.beautify) {
-    var UglifyJS = require("uglify-js");
-    var toplevel_ast = UglifyJS.parse(program);
-    toplevel_ast.figure_out_scope();
-    program = toplevel_ast.print_to_string({
-      beautify: true,
-      indent_level: 2
-    });
+
+  var filename = options.argv.remain[0];
+
+  if (!filename) {
+    console.error([
+      "Usage: brozula [OPTION...] program.lua[x]",
+      "Brozula compiles lua files to bytecode and then executes them using a JS VM",
+      "The lua -> luax (luajit bytecode) step is done by using luajit",
+      "",
+      "Examples:",
+      "  brozula myprogram.lua",
+      "  brozula --print myprogram.lua",
+      "  brozula -pb myprogram.luax",
+      "",
+      " Main operation mode:",
+      "",
+      "  -x, --execute          Execute the generated javascript",
+      "                         (This is the default behavior)",
+      "  -p, --print            Print the generated javascript",
+      "  --serve port           Serve the current folder over HTTP auto-compiling",
+      "                         any lua scripts requested",
+      "",
+      " Operation modifiers:",
+      "",
+      "  -u, --uglify           Compress the generated javascript using uglify-js",
+      "  -b, --beautify         Beautify the generated javascript using uglify-js",
+      "  -l, --lines            Show line numbers when printing",
+      ""
+    ].join("\n"));
+    process.exit(-1);
   }
-  if (options.print) {
-    if (options.lines) {
-      var lines = program.split("\n");
-      var digits = Math.ceil(Math.log(lines.length) / Math.LN10);
-      var padding = "";
-      for (var i = 0; i < digits; i++) {
-        padding += "0";
+
+
+  filename = pathResolve(process.cwd(), filename);
+  compile(filename, function (err, program) {
+    if (err) throw err;
+    program = "(function () {\n\n" + program + "\n\n}());";
+    if (options.uglify) {
+      var UglifyJS = require("uglify-js");
+      var toplevel_ast = UglifyJS.parse(program);
+      toplevel_ast.figure_out_scope();
+      var compressor = UglifyJS.Compressor({});
+      var compressed_ast = toplevel_ast.transform(compressor);
+      compressed_ast.figure_out_scope();
+      compressed_ast.compute_char_frequency();
+      compressed_ast.mangle_names();
+      program = compressed_ast.print_to_string({});
+    }
+    if (options.beautify) {
+      var UglifyJS = require("uglify-js");
+      var toplevel_ast = UglifyJS.parse(program);
+      toplevel_ast.figure_out_scope();
+      program = toplevel_ast.print_to_string({
+        beautify: true,
+        indent_level: 2
+      });
+    }
+    if (options.print) {
+      if (options.lines) {
+        var lines = program.split("\n");
+        var digits = Math.ceil(Math.log(lines.length) / Math.LN10);
+        var padding = "";
+        for (var i = 0; i < digits; i++) {
+          padding += "0";
+        }
+        console.log(lines.map(function (line, i) {
+          var num = (i + 1) + "";
+          return "\033[34m" + padding.substr(num.length) + num + "\033[0m " + line;
+        }).join("\n"));
       }
-      console.log(lines.map(function (line, i) {
-        var num = (i + 1) + "";
-        return "\033[34m" + padding.substr(num.length) + num + "\033[0m " + line;
-      }).join("\n"));
+      else {
+        console.log(program);
+      }
     }
-    else {
-      console.log(program);
+    if (options.execute) {
+      eval(program);
     }
-  }
-  if (options.execute) {
-    eval(program);
-  }
-});
+  });
+}

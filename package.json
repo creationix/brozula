@@ -24,10 +24,9 @@
   "author": "Tim Caswell",
   "license": "MIT",
   "readmeFilename": "README.md",
-  "devDependencies": {
-    "uglify-js": "~2.2.1"
-  },
   "dependencies": {
-    "nopt": "~2.0.0"
+    "nopt": "~2.0.0",
+    "send": "~0.1.0",
+    "uglify-js": "~2.2.1"
   }
 }
