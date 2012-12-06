@@ -100,6 +100,9 @@ if (options.serve) {
       return send(req, pathJoin(__dirname, "/browser-buffer.js")).pipe(res);
     }
     var path = pathJoin(base, url.pathname);
+    if (path[path.length - 1] === "/") {
+      path += "index.html";
+    }
     console.log(req.method, path);
     if (/\.luax$/.test(path)) {
       luaToBytecode(path.substr(0, path.length - 1), function (err, path) {
