@@ -382,7 +382,8 @@ var builtins = (function () {
   }
 
   function index(tab, key) {
-    if (tab.hasOwnProperty(key)) {
+    if (tab === null) throw "attempt to index a nil value";
+    if (key in tab) {
       return tab[key];
     }
     if (tab.hasOwnProperty("__metatable")) {
@@ -399,7 +400,19 @@ var builtins = (function () {
     return null;
   }
 
+  function call(thisp, tab, args) {
+    var tabType = rawType(tab);
+    if (tabType === "function") {
+      var ret = tab.apply(thisp, args);
+      if (ret === undefined) return [];
+      if (Array.isArray(ret)) return ret;
+      return [ret];
+    }
+    if (tab === null) throw "attempt to call a " + tabType + " value";
+  }
+
   function newindex(tab, key, value) {
+    if (tab === null) throw "attempt to index a nil value";
     if (tab.hasOwnProperty(key)) {
       return tab[key] = value;
     }
@@ -412,10 +425,14 @@ var builtins = (function () {
     tab[key] = value;
   }
 
+  function rawType(val) {
+    if (val === null) return "nil";
+    if (typeof val === "object") return "table";
+    return typeof val;
+  }
+
   function type(val) {
-    if (val === null) return ["nil"];
-    if (typeof val === "object") return ["table"];
-    return [typeof val];
+    return [rawType(val)];
   }
 
   function arr(val) {
@@ -442,13 +459,22 @@ var builtins = (function () {
     throw message;
   }
 
+  function func() {
+    return eval("(new Function (" + Array.prototype.map.call(arguments, function (arg) {
+      return JSON.stringify(arg);
+    }).join(",") + "))");
+  }
+
 var builtins = {
   type: type,
   setmetatable: setmetatable,
   print: print,
   assert: assert,
-  error: error
+  error: error,
+  eval: eval,
+  func: func
 };
+
 }).toString();
 builtins = builtins.substr(14, builtins.length - 15);
 
@@ -504,7 +530,7 @@ function compile(buffer, skipBuiltins) {
     var state = {
       framesize: proto.framesize,
       need$: false,
-      need$$: false
+      needthis: false
     };
 
     if (needBlock) {
@@ -536,7 +562,7 @@ function compile(buffer, skipBuiltins) {
 
     var vars = [];
     if (state.need$) vars.push("$");
-    if (state.need$$) vars.push("$$");
+    if (state.needthis) vars.push("thisp");
     for (var i = proto.numparams; i < proto.framesize; i++) {
       vars.push(slot(i));
     }
@@ -737,19 +763,23 @@ var generators = {
     return slot(a) + "=" + JSON.stringify(d) + ";";
   },
   GGET: function (a, d) {
-    return slot(a) + "=index(this," + JSON.stringify(d) + ");";
+    this.needthis = true;
+    return "thisp=this;" + slot(a) + "=index(this," + JSON.stringify(d) + ");";
   },
   GSET: function (a, d) {
     return "newindex(this," + slot(a) + "," + JSON.stringify(d) + ");";
   },
   TGETV: function (a, b, c) {
-    return slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
+    this.needthis = true;
+    return "thisp=" + slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
   },
   TGETS: function (a, b, c) {
-    return slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
+    this.needthis = true;
+    return "thisp=" + slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
   },
   TGETB: function (a, b, c) {
-    return slot(a) + "=index(" + slot(b) + "," + c + ");";
+    this.needthis = true;
+    return "thisp=" + slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + c + ");";
   },
   TSETV: function (a, b, c) {
     return "newindex(" + slot(b) + "," + slot(c) + "," + slot(a) + ");";
@@ -764,72 +794,59 @@ var generators = {
     return 'throw new Error("TODO: Implement TSETM");';
   },
   CALLM: function (a, b, c) {
-    var line;
-    if (b > 1) {
-      line = "$=arr(";
-      this.need$ = true;
-    }
-    else if (b == 0) {
-      line = "$$=arr(";
-      this.need$$ = true;
-    }
-    else { line = ""; }
+    var args;
     if (c) {
-      line += slot(a) + ".apply(null,[";
+      args = [];
       for (var i = a + 1; i <= a + c; i++) {
-        if (i > a + 1) line += ",";
-        line += slot(i);
+        args.push(slot(i));
       }
-      line += "].concat($$)";
+      args = "[" + args.join(",") + "].concat($)";
     }
     else {
-      line += slot(a) + ".apply(null,$$";
+      args = "$";
     }
-    if (b === 1) {
-      line += ");";
+    var fn = "call(thisp," + slot(a) + "," + args + ")";
+    if (b === 0) { // multires
+      this.need$ = true;
+      return "$=" + fn + ";";
     }
-    else {
-      line += "));";
+    if (b === 1) { // No return values
+      return fn + ";";
     }
-    if (b) {
-      line += "$$=undefined;";
+    if (b === 2) { // one return value
+      return slot(a) + "=" + fn + "[0];";
     }
-    if (b > 1) {
-      for (var i = 0; i < b - 1; i++) {
-        line += slot(a + i) + "=$[" + i + "];";
-      }
-      line += "$=undefined;";
+    this.need$ = true;
+    var line = "$=" + fn + ";";
+    for (var i = 0; i < b - 1; i++) {
+      line += slot(a + i) + "=$[" + i + "];";
     }
+    line += "$=undefined;";
     return line;
   },
   CALL: function (a, b, c) {
-    var line;
-    if (b > 1) {
-      line = "$=arr(";
-      this.need$ = true;
-    }
-    else if (b == 0) {
-      line = "$$=arr(";
-      this.need$$ = true;
-    }
-    else { line = ""; }
-    line += slot(a) + "(";
+    var args = [];
     for (var i = a + 1; i < a + c; i++) {
-      if (i > a + 1) line += ",";
-      line += slot(i);
+      args.push(slot(i));
     }
-    if (b === 1) {
-      line += ");";
+    args = "[" + args.join(",") + "]";
+    var fn = "call(thisp," + slot(a) + "," + args + ")";
+    if (b === 0) { // multires
+      this.need$ = true;
+      return "$=" + fn + ";";
     }
-    else {
-      line += "));";
+    if (b === 1) { // No return values
+      return fn + ";";
     }
-    if (b > 1) {
-      for (var i = 0; i < b - 1; i++) {
-        line += slot(a + i) + "=$[" + i + "];";
-      }
-      line += "$=undefined;";
+    if (b === 2) { // one return value
+      return slot(a) + "=" + fn + "[0];";
     }
+    this.need$ = true;
+    var line = "$=" + fn + ";";
+    for (var i = 0; i < b - 1; i++) {
+      line += slot(a + i) + "=$[" + i + "];";
+    }
+    line += "$=undefined;";
     return line;
   },
   CALLMT: function () {

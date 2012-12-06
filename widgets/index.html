@@ -24,7 +24,7 @@
 
     load("dombuilder.luax", function (err, fn) {
       if (err) throw err;
-      window.domBuilder = fn();
+      window.domBuilder = fn()[0];
       load("app.luax", function (err, fn) {
         if (err) throw err;
         fn();
