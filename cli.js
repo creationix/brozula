@@ -6,6 +6,8 @@ var readFile = require('fs').readFile;
 var statFile = require('fs').stat;
 var pathResolve = require("path").resolve;
 var pathJoin = require("path").join;
+var dirname = require('path').dirname;
+var basename = require('path').basename;
 
 // Compile lua files to luajit on the fly with a locking queue for concurrent
 // requests.
@@ -21,7 +23,7 @@ function luaToBytecode(path, callback) {
       callback(err, newpath);
     });
   }
-  var newpath = path + "x";
+  var newpath = pathJoin(dirname(path), "." + basename(path) + "x");
   statFile(path, function (err, stat) {
     if (err) return callbacks(err);
     statFile(newpath, function (err, stat2) {
