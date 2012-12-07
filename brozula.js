@@ -831,6 +831,7 @@ var generators = {
     else {
       args = "$";
     }
+    this.needthis = true;
     var fn = "call(thisp," + slot(a) + "," + args + ")";
     if (b === 0) { // multires
       this.need$ = true;
@@ -856,6 +857,7 @@ var generators = {
       args.push(slot(i));
     }
     args = "[" + args.join(",") + "]";
+    this.needthis = true;
     var fn = "call(thisp," + slot(a) + "," + args + ")";
     if (b === 0) { // multires
       this.need$ = true;
