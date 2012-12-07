@@ -435,15 +435,41 @@ var builtins = (function () {
     return [rawType(val)];
   }
 
-  function arr(val) {
-    if (Array.isArray(val)) return val;
-    if (val === undefined) return [];
-    return [val];
-  }
 
   function setmetatable(tab, meta) {
     Object.defineProperty(tab, "__metatable", {value:meta});
     return [tab];
+  }
+
+  function next(tab, key) {
+    var isNull = key === undefined || key === null;
+    if (Array.isArray(tab)) {
+      if (tab.length === 0) {
+        if (isNull) return [null];
+      }
+      else if (typeof key === "number") {
+        if (key === tab.length) return [null];
+        if (tab.hasOwnProperty(key + 1)) {
+          var n = key + 1;
+          return[n, tab[n]];
+        }
+      }
+    }
+    else {
+      var keys = Object.keys(tab);
+      if (keys.length === 0) {
+        if (isNull) return [null];
+      }
+      else {
+        if (key === keys[keys.length - 1]) return [null];
+        var index = keys.indexOf(key);
+        if (index >= 0) {
+          var n = keys[index + 1];
+          return [n, tab[n]];
+        }
+      }
+    }
+    throw "invalid key to 'next'";
   }
 
   function print() {
