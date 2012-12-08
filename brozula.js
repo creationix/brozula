@@ -381,8 +381,62 @@ var builtins = (function () {
     return !lt(op1, op2);
   }
 
+  function patternToRegExp(pattern, flags) {
+    // TODO: translate lua escapes to js escapes.
+    return new RegExp(pattern, flags);
+  }
+
+  function match(s, pattern, init) {
+    if (init) throw new Error("TODO: Implement match init offset");
+    var regexp = patternToRegExp(pattern);
+    var m = s.match(regexp);
+    if (!m) return [];
+    if (m.length > 1) {
+      return Array.prototype.slice.call(m, 1);
+    }
+    return [m[0]];
+  }
+
+  function gmatch(s, pattern) {
+    var regexp = patternToRegExp(pattern);
+    return function () {
+      var m = regexp.exec(s);
+      if (!m) return [];
+      if (m.length > 1) {
+        return Array.prototype.slice.call(m, 1);
+      }
+      return [m[0]];
+    };
+  }
+
+  var string = {
+    match: match,
+    gmatch: gmatch
+  };
+
+  function concat(tab, joiner) {
+    if (!(tab && typeof tab === "object")) throw "table expected";
+    if (!Array.isArray(tab)) return [""];
+    return [tab.join(joiner)];
+  }
+
+  function insert(tab, value) {
+    if (!(tab && typeof tab === "object")) throw "table expected";
+    if (!Array.isArray(tab)) throw "TODO: Implement insert on non-array tables";
+    tab.push(value);
+    return [];
+  }
+
+  var table = {
+    concat: concat,
+    insert: insert
+  };
+
   function index(tab, key) {
     if (tab === null) throw "attempt to index a nil value";
+    if (typeof tab === "string") {
+      return string[key];
+    }
     if (key in tab) {
       return tab[key];
     }
@@ -442,34 +496,34 @@ var builtins = (function () {
   }
 
   function next(tab, key) {
-    var isNull = key === undefined || key === null;
     if (Array.isArray(tab)) {
-      if (tab.length === 0) {
-        if (isNull) return [null];
-      }
-      else if (typeof key === "number") {
-        if (key === tab.length) return [null];
-        if (tab.hasOwnProperty(key + 1)) {
-          var n = key + 1;
-          return[n, tab[n]];
-        }
-      }
+      return inext(tab, key);
     }
-    else {
-      var keys = Object.keys(tab);
-      if (keys.length === 0) {
-        if (isNull) return [null];
-      }
-      else {
-        if (key === keys[keys.length - 1]) return [null];
-        var index = keys.indexOf(key);
-        if (index >= 0) {
-          var n = keys[index + 1];
-          return [n, tab[n]];
-        }
-      }
+    var isNull = key === undefined || key === null;
+    var keys = Object.keys(tab);
+    var index, newKey;
+    if (keys.length && (index = keys.indexOf(key)) + 1 &&
+        tab.hasOwnProperty(newKey = keys[index])) {
+      return [newKey, tab[newKey]];
     }
-    throw "invalid key to 'next'";
+    return [];
+  }
+
+  function pairs(tab) {
+    return [next, tab, null];
+  }
+
+  function inext(tab, key) {
+    var newKey;
+    if (Array.isArray(tab) && tab.length && typeof key === "number" &&
+        tab.hasOwnProperty(newKey = key + 1)) {
+      return [newKey, tab[newKey]];
+    }
+    return [];
+  }
+
+  function ipairs(tab) {
+    return [inext, tab, 0];
   }
 
   function print() {
@@ -492,11 +546,15 @@ var builtins = (function () {
   }
 
 var builtins = {
+  table: table,
   type: type,
   setmetatable: setmetatable,
   print: print,
   assert: assert,
   error: error,
+  next: next,
+  pairs: pairs,
+  ipairs: ipairs,
   eval: eval,
   func: func
 };
@@ -841,7 +899,7 @@ var generators = {
       return fn + ";";
     }
     if (b === 2) { // one return value
-      return slot(a) + "=" + fn + "[0];";
+      return slot(a) + "=" + fn + "[0] || null;";
     }
     this.need$ = true;
     var line = "$=" + fn + ";";
@@ -867,7 +925,7 @@ var generators = {
       return fn + ";";
     }
     if (b === 2) { // one return value
-      return slot(a) + "=" + fn + "[0];";
+      return slot(a) + "=" + fn + "[0] || null;";
     }
     this.need$ = true;
     var line = "$=" + fn + ";";
@@ -877,17 +935,67 @@ var generators = {
     line += "$=undefined;";
     return line;
   },
-  CALLMT: function () {
-    return 'throw new Error("TODO: Implement CALLMT");';
+  CALLMT: function (a) {
+    this.needthis = true;
+    return "return call(thisp," + slot(a) + ",$);";
   },
-  CALLT: function () {
-    return 'throw new Error("TODO: Implement CALLT");';
+  CALLT: function (a, d) {
+    var args = [];
+    for (var i = a + 1; i < a + d; i++) {
+      args.push(slot(i));
+    }
+    args = "[" + args.join(",") + "]";
+    this.needthis = true;
+    return "return call(thisp," + slot(a) + "," + args + ");";
   },
-  ITERC: function () {
-    return 'throw new Error("TODO: Implement ITERC");';
+  ITERC: function (a, b, c) {
+    var line =
+      slot(a) + "=" + slot(a - 3) + ";" +
+      slot(a + 1) + "=" + slot(a - 2) + ";" +
+      slot(a + 2) + "=" + slot(a - 1) + ";";
+    this.needthis = true;
+    var fn = "call(thisp," + slot(a) + ",[" + slot(a + 1) + "," + slot(a + 2) + "])";
+    if (b === 0) { // multires
+      this.need$ = true;
+      return line + "$=" + fn + ";";
+    }
+    if (b === 1) { // No return values
+      return line + fn + ";";
+    }
+    if (b === 2) { // one return value
+      return line + slot(a) + "=" + fn + "[0] || null;";
+    }
+    this.need$ = true;
+    line += "$=" + fn + ";";
+    for (var i = 0; i <= b - 2; i++) {
+      line += slot(a + i) + "=$[" + i + "];";
+    }
+    line += "$=undefined;";
+    return line;
   },
-  ITERN: function () {
-    return 'throw new Error("TODO: Implement ITERN");';
+  ITERN: function (a, b, c) {
+    var line =
+      slot(a) + "=" + slot(a - 3) + ";" +
+      slot(a + 1) + "=" + slot(a - 2) + ";" +
+      slot(a + 2) + "=" + slot(a - 1) + ";";
+    var fn = slot(a - 3) + "(next," + slot(a - 1) + ")";
+    if (b === 0) { // multires
+      this.need$ = true;
+      return line + "$=" + fn + ";";
+    }
+    if (b === 1) { // No return values
+      return line + fn + ";";
+    }
+    if (b === 2) { // one return value
+      return line + slot(a) + "=" + fn + "[0] || null;";
+    }
+    this.need$ = true;
+    line += "$=" + fn + ";";
+    for (var i = 0; i < b - 1; i++) {
+      line += slot(a + i) + "=$[" + i + "];";
+    }
+    line += "$=undefined;";
+    return line;
   },
   VARG: function () {
     return 'throw new Error("TODO: Implement VARG");';
@@ -926,8 +1034,8 @@ var generators = {
   JFORL: function () {
     return 'throw new Error("TODO: Implement JFORL");';
   },
-  ITERL: function () {
-    return 'throw new Error("TODO: Implement ITERL");';
+  ITERL: function (a, d) {
+    return "if (" + slot(a) + "){" + slot(a-1) + "=" + slot(a) + ";state=" + stateLabel(d) + ";break;}";
   },
   IITERL: function () {
     return 'throw new Error("TODO: Implement IITERL");';
@@ -936,13 +1044,13 @@ var generators = {
     return 'throw new Error("TODO: Implement JITERL");';
   },
   LOOP: function () {
-    return "";
+    return ""; // tracing noop
   },
   ILOOP: function () {
-    return "";
+    return 'throw new Error("TODO: Implement ILOOP");';
   },
   JLOOP: function () {
-    return "";
+    return 'throw new Error("TODO: Implement JLOOP");';
   },
   JMP: function (a, d) {
     return "state=" + stateLabel(d) + ";break;";
