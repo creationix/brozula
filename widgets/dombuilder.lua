@@ -42,14 +42,11 @@ function domBuilder(json, refs)
       if partType == "string" then
         -- Create a new dom node by parsing the tagline
         local tag = part:match("^[^.$#]+") or "div"
-        node = document.createElement(tag);
-        first = true;
+        node = document.createElement(tag)
+        first = true
         local classes = {}
         for class in part:gmatch("%.[^.$#]+") do
-          table.insert(classes, class:sub(2))
-        end
-        if #classes > 0 then
-          node.setAttribute("class", table.concat(classes, " "))
+          node.classList.add(class:sub(2))
         end
         local id = part:match("#[^.$#]+")
         if id then node.setAttribute("id", id:sub(2)) end
@@ -76,7 +73,7 @@ end
 
 function setAttrs(node, attrs)
   for key, value in pairs(attrs) do
-    if key == "$" then
+    if key == "oninit" then
       value(node)
     elseif key == "css" then
       setStyle(node.style, value)
