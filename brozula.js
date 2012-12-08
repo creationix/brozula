@@ -383,6 +383,7 @@ var builtins = (function () {
 
   function patternToRegExp(pattern, flags) {
     // TODO: translate lua escapes to js escapes.
+    pattern = pattern.replace(/%(.)/g, "\\$1");
     return new RegExp(pattern, flags);
   }
 
@@ -398,7 +399,7 @@ var builtins = (function () {
   }
 
   function gmatch(s, pattern) {
-    var regexp = patternToRegExp(pattern);
+    var regexp = patternToRegExp(pattern, "g");
     return function () {
       var m = regexp.exec(s);
       if (!m) return [];
@@ -409,9 +410,21 @@ var builtins = (function () {
     };
   }
 
+  function sub(s, i, j) {
+    var start, length;
+    if (i < 0) i = s.length - i;
+    start = i - 1;
+    if (typeof j === "number") {
+      if (j < 0) j = s.length - j;
+      length = j - i + 1;
+    }
+    return [s.substr(start, length)];
+  }
+
   var string = {
     match: match,
-    gmatch: gmatch
+    gmatch: gmatch,
+    sub: sub
   };
 
   function concat(tab, joiner) {
@@ -432,32 +445,39 @@ var builtins = (function () {
     insert: insert
   };
 
+  function thisCheck(tab, value) {
+    if (typeof value === "function") {
+      return value.bind(tab);
+    }
+    return value;
+  }
+
   function index(tab, key) {
     if (tab === null) throw "attempt to index a nil value";
     if (typeof tab === "string") {
-      return string[key];
+      return thisCheck(tab, string[key]);
     }
     if (key in tab) {
-      return tab[key];
+      return thisCheck(tab, tab[key]);
     }
     if (tab.hasOwnProperty("__metatable")) {
       var metamethod = tab.__metatable.__index;
       if (metamethod) {
         if (typeof metamethod === "function") {
-          return metamethod(tab, key);
+          return thisCheck(tab, metamethod(tab, key));
         }
         if (metamethod.hasOwnProperty(key)) {
-          return metamethod[key];
+          return thisCheck(tab, metamethod[key]);
         }
       }
     }
     return null;
   }
 
-  function call(thisp, tab, args) {
+  function call(tab, args) {
     var tabType = rawType(tab);
     if (tabType === "function") {
-      var ret = tab.apply(thisp, args);
+      var ret = tab.apply(null, args);
       if (ret === undefined) return [];
       if (Array.isArray(ret)) return ret;
       return [ret];
@@ -646,7 +666,6 @@ function compile(buffer, skipBuiltins) {
 
     var vars = [];
     if (state.need$) vars.push("$");
-    if (state.needthis) vars.push("thisp");
     for (var i = proto.numparams; i < proto.framesize; i++) {
       vars.push(slot(i));
     }
@@ -847,23 +866,19 @@ var generators = {
     return slot(a) + "=" + JSON.stringify(d) + ";";
   },
   GGET: function (a, d) {
-    this.needthis = true;
-    return "thisp=this;" + slot(a) + "=index(this," + JSON.stringify(d) + ");";
+    return slot(a) + "=index(this," + JSON.stringify(d) + ");";
   },
   GSET: function (a, d) {
     return "newindex(this," + slot(a) + "," + JSON.stringify(d) + ");";
   },
   TGETV: function (a, b, c) {
-    this.needthis = true;
-    return "thisp=" + slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
+    return slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
   },
   TGETS: function (a, b, c) {
-    this.needthis = true;
-    return "thisp=" + slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
+    return slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
   },
   TGETB: function (a, b, c) {
-    this.needthis = true;
-    return "thisp=" + slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + c + ");";
+    return slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + c + ");";
   },
   TSETV: function (a, b, c) {
     return "newindex(" + slot(b) + "," + slot(c) + "," + slot(a) + ");";
@@ -890,7 +905,7 @@ var generators = {
       args = "$";
     }
     this.needthis = true;
-    var fn = "call(thisp," + slot(a) + "," + args + ")";
+    var fn = "call(" + slot(a) + "," + args + ")";
     if (b === 0) { // multires
       this.need$ = true;
       return "$=" + fn + ";";
@@ -916,7 +931,7 @@ var generators = {
     }
     args = "[" + args.join(",") + "]";
     this.needthis = true;
-    var fn = "call(thisp," + slot(a) + "," + args + ")";
+    var fn = "call(" + slot(a) + "," + args + ")";
     if (b === 0) { // multires
       this.need$ = true;
       return "$=" + fn + ";";
@@ -937,7 +952,7 @@ var generators = {
   },
   CALLMT: function (a) {
     this.needthis = true;
-    return "return call(thisp," + slot(a) + ",$);";
+    return "return call(" + slot(a) + ",$);";
   },
   CALLT: function (a, d) {
     var args = [];
@@ -946,7 +961,7 @@ var generators = {
     }
     args = "[" + args.join(",") + "]";
     this.needthis = true;
-    return "return call(thisp," + slot(a) + "," + args + ");";
+    return "return call(" + slot(a) + "," + args + ");";
   },
   ITERC: function (a, b, c) {
     var line =
@@ -954,7 +969,7 @@ var generators = {
       slot(a + 1) + "=" + slot(a - 2) + ";" +
       slot(a + 2) + "=" + slot(a - 1) + ";";
     this.needthis = true;
-    var fn = "call(thisp," + slot(a) + ",[" + slot(a + 1) + "," + slot(a + 2) + "])";
+    var fn = "call(" + slot(a) + ",[" + slot(a + 1) + "," + slot(a + 2) + "])";
     if (b === 0) { // multires
       this.need$ = true;
       return line + "$=" + fn + ";";
