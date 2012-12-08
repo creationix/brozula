@@ -116,11 +116,16 @@ if (options.serve) {
           res.statusCode = 500;
           return res.end(err.stack);
         }
-        send(req, path).pipe(res);
+        console.log("sending", path, "for", req.url);
+        send(req, path)
+          .hidden(true)
+          .pipe(res);
       });
       return;
     }
-    send(req, path).pipe(res);
+    send(req, url.pathname)
+      .root(base)
+      .pipe(res);
   });
   server.listen(options.serve, function () {
     console.log("Serving server listening at", server.address());
