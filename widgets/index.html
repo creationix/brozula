@@ -109,6 +109,103 @@ var opcodes = [
   "FUNCV", "IFUNCV", "JFUNCV", "FUNCC", "FUNCCW"
 ];
 
+// For mapping opcode names to parse instructions
+var bcdef = {
+  ISLT: {ma: "var", md: "var", mt: "lt"},
+  ISGE: {ma: "var", md: "var", mt: "lt"},
+  ISLE: {ma: "var", md: "var", mt: "le"},
+  ISGT: {ma: "var", md: "var", mt: "le"},
+  ISEQV: {ma: "var", md: "var", mt: "eq"},
+  ISNEV: {ma: "var", md: "var", mt: "eq"},
+  ISEQS: {ma: "var", md: "str", mt: "eq"},
+  ISNES: {ma: "var", md: "str", mt: "eq"},
+  ISEQN: {ma: "var", md: "num", mt: "eq"},
+  ISNEN: {ma: "var", md: "num", mt: "eq"},
+  ISEQP: {ma: "var", md: "pri", mt: "eq"},
+  ISNEP: {ma: "var", md: "pri", mt: "eq"},
+  ISTC: {ma: "dst", md: "var"},
+  ISFC: {ma: "dst", md: "var"},
+  IST: {md: "var"},
+  ISF: {md: "var"},
+  MOV: {ma: "dst", md: "var"},
+  NOT: {ma: "dst", md: "var"},
+  UNM: {ma: "dst", md: "var", mt: "unm"},
+  LEN: {ma: "dst", md: "var", mt: "len"},
+  ADDVN: {ma: "dst", mb: "var", mc: "num", mt: "add"},
+  SUBVN: {ma: "dst", mb: "var", mc: "num", mt: "sub"},
+  MULVN: {ma: "dst", mb: "var", mc: "num", mt: "mul"},
+  DIVVN: {ma: "dst", mb: "var", mc: "num", mt: "div"},
+  MODVN: {ma: "dst", mb: "var", mc: "num", mt: "mod"},
+  ADDNV: {ma: "dst", mb: "var", mc: "num", mt: "add"},
+  SUBNV: {ma: "dst", mb: "var", mc: "num", mt: "sub"},
+  MULNV: {ma: "dst", mb: "var", mc: "num", mt: "mul"},
+  DIVNV: {ma: "dst", mb: "var", mc: "num", mt: "div"},
+  MODNV: {ma: "dst", mb: "var", mc: "num", mt: "mod"},
+  ADDVV: {ma: "dst", mb: "var", mc: "var", mt: "add"},
+  SUBVV: {ma: "dst", mb: "var", mc: "var", mt: "sub"},
+  MULVV: {ma: "dst", mb: "var", mc: "var", mt: "mul"},
+  DIVVV: {ma: "dst", mb: "var", mc: "var", mt: "div"},
+  MODVV: {ma: "dst", mb: "var", mc: "var", mt: "mod"},
+  POW: {ma: "dst", mb: "var", mc: "var", mt: "pow"},
+  CAT: {ma: "dst", mb: "rbase", mc: "rbase", mt: "concat"},
+  KSTR: {ma: "dst", md: "str"},
+  KCDATA: {ma: "dst", md: "cdata"},
+  KSHORT: {ma: "dst", md: "lits"},
+  KNUM: {ma: "dst", md: "num"},
+  KPRI: {ma: "dst", md: "pri"},
+  KNIL: {ma: "base", md: "base"},
+  UGET: {ma: "dst", md: "uv"},
+  USETV: {ma: "uv", md: "var"},
+  USETS: {ma: "uv", md: "str"},
+  USETN: {ma: "uv", md: "num"},
+  USETP: {ma: "uv", md: "pri"},
+  UCLO: {ma: "rbase", md: "jump"},
+  FNEW: {ma: "dst", md: "func", mt: "gc"},
+  TNEW: {ma: "dst", md: "lit", mt: "gc"},
+  TDUP: {ma: "dst", md: "tab", mt: "gc"},
+  GGET: {ma: "dst", md: "str", mt: "index"},
+  GSET: {ma: "var", md: "str", mt: "newindex"},
+  TGETV: {ma: "dst", mb: "var", mc: "var", mt: "index"},
+  TGETS: {ma: "dst", mb: "var", mc: "str", mt: "index"},
+  TGETB: {ma: "dst", mb: "var", mc: "lit", mt: "index"},
+  TSETV: {ma: "var", mb: "var", mc: "var", mt: "newindex"},
+  TSETS: {ma: "var", mb: "var", mc: "str", mt: "newindex"},
+  TSETB: {ma: "var", mb: "var", mc: "lit", mt: "newindex"},
+  TSETM: {ma: "base", md: "num", mt: "newindex"},
+  CALLM: {ma: "base", mb: "lit", mc: "lit", mt: "call"},
+  CALL: {ma: "base", mb: "lit", mc: "lit", mt: "call"},
+  CALLMT: {ma: "base", md: "lit", mt: "call"},
+  CALLT: {ma: "base", md: "lit", mt: "call"},
+  ITERC: {ma: "base", mb: "lit", mc: "lit", mt: "call"},
+  ITERN: {ma: "base", mb: "lit", mc: "lit", mt: "call"},
+  VARG: {ma: "base", mb: "lit", mc: "lit"},
+  ISNEXT: {ma: "base", md: "jump"},
+  RETM: {ma: "base", md: "lit"},
+  RET: {ma: "rbase", md: "lit"},
+  RET0: {ma: "rbase", md: "lit"},
+  RET1: {ma: "rbase", md: "lit"},
+  FORI: {ma: "base", md: "jump"},
+  JFORI: {ma: "base", md: "jump"},
+  FORL: {ma: "base", md: "jump"},
+  IFORL: {ma: "base", md: "jump"},
+  JFORL: {ma: "base", md: "lit"},
+  ITERL: {ma: "base", md: "jump"},
+  IITERL: {ma: "base", md: "jump"},
+  JITERL: {ma: "base", md: "lit"},
+  LOOP: {ma: "rbase", md: "jump"},
+  ILOOP: {ma: "rbase", md: "jump"},
+  JLOOP: {ma: "rbase", md: "lit"},
+  JMP: {ma: "rbase", md: "jump"},
+  FUNCF: {ma: "rbase"},
+  IFUNCF: {ma: "rbase"},
+  JFUNCF: {ma: "rbase", md: "lit"},
+  FUNCV: {ma: "rbase"},
+  IFUNCV: {ma: "rbase"},
+  JFUNCV: {ma: "rbase", md: "lit"},
+  FUNCC: {ma: "rbase"},
+  FUNCCW: {ma: "rbase"}
+};
+
 var kgctypes = ["CHILD", "TAB", "I64", "U64", "COMPLEX", "STR"];
 var ktabtypes = ["NIL", "FALSE", "TRUE", "INT", "NUM", "STR"];
 
@@ -191,11 +288,6 @@ function readknum(parser) {
 }
 
 
-function Env() {}
-Env.prototype.print = function () {
-
-}
-
 function Proto(buffer, env) {
   this.env = env || {};
   var parser = new Parser(buffer);
@@ -211,14 +303,17 @@ function Proto(buffer, env) {
 
   // bcinsW* uvdataH* kgc* knum*
   this.bc = buffer.slice(parser.index, parser.index + numbc * 4);
-  parser.index += numbc * 4;
+  var bcins = new Array(numbc);
+  for (var i = 0; i < numbc; i++) {
+    bcins[i] = parser.W();
+  }
 
   var uvdata = new Array(numuv);
   for (var i = 0; i < numuv; i++) {
     uvdata[i] = parser.H();
   }
   var constants = new Array(numkgc + numkn);
-//  var childc = protoIndex;
+  var childc = 0;
   for (var i = 0; i < numkgc; i++) {
     var kgctype = parser.U();
     var type = kgctypes[kgctype] || "STR";
@@ -236,16 +331,213 @@ function Proto(buffer, env) {
   // Make sure we consumed all the bytes properly
   if (parser.index !== buffer.length) throw new Error((buffer.length - parser.index) + " bytes leftover");
 
+  function parseArg(type, val, i) {
+    switch (type) {
+      case "lit": return val >>> 0;
+      case "lits": return val & 0x80 ? val - 0x100 : val;
+      case "pri": return val === 0 ? null : val === 1 ? false : true;
+      case "num": return constants[val];
+      case "str":
+      case "tab":
+      case "func":
+      case "cdata":
+        return constants[constants.length - val - 1];
+      case "uv": return uvdata[val];
+      case "jump":
+        return val - 0x8000;
+      default:
+        return val;
+    }
+  }
 
+
+  bcins = bcins.map(function (word) {
+    var opcode = opcodes[word & 0xff];
+    var def = bcdef[opcode];
+    var op = {
+      op: opcode,
+    };
+    if (def.ma) {
+      op.a = parseArg(def.ma, (word >> 8) & 0xff, i);
+    }
+    if (def.mb) {
+      op.b = parseArg(def.mb, word >> 24, i);
+    }
+    if (def.mc) {
+      op.c = parseArg(def.mc, (word >> 16) & 0xff, i);
+    }
+    if (def.md) {
+      op.d = parseArg(def.mc, word >> 16, i);
+    }
+    return op;
+  });
+
+  this.bcins = bcins;
   this.slots = new Array(framesize);
   this.uvdata = uvdata;
   this.constants = constants;
 }
 
+Proto.prototype.exec3 = function () {
+  var pc = 0;
+  var offset;
+  for(;;pc++) {
+    var bc = this.bcins[pc];
+    switch(bc.op) {
+
+      case "TDUP":
+        var p = bc.d, tab;
+        if (Array.isArray(p)) {
+          tab = new Array(p.length);
+          for (var i = 0, l = p.length; i < l; i++) {
+            tab[i] = p[i];
+          }
+        }
+        else {
+          tab = {};
+          var keys = Object.keys(p);
+          for (var i = 0, l = keys.length; i < l; i++) {
+            var key = keys[i];
+            tab[key] = p[key];
+          }
+        }
+        this.slots[bc.a] = tab;
+        continue;
+
+      case "KSHORT":
+        this.slots[bc.a] = bc.d;
+        continue;
+
+      case "GGET":
+        this.slots[bc.a] = this.env[bc.d];
+        continue;
+
+      case "KSTR":
+        this.slots[bc.a] = bc.d;
+        continue;
+
+      case "CALL":
+        var args = this.slots.slice(bc.a + 1, bc.a + bc.c);
+        var ret = this.slots[bc.a].apply(null, args);
+        for (var i = 0, l = bc.b - 1; i < l; i++) {
+          this.slots[bc.a + i] = ret[i];
+        }
+        continue;
+
+      case "TGETV":
+        this.slots[bc.a] = this.slots[bc.b][this.slots[bc.c]];
+        continue;
+
+      case "ISF":
+        var expr = this.slots[bc.d];
+        if (!(expr === null || expr == false || expr == undefined)) {
+          pc++;
+        }
+        continue;
+
+      case "JMP":
+        pc += bc.d;
+        continue;
+
+      case "LOOP":
+        continue;
+
+      case "ADDVN":
+        this.slots[bc.a] = this.slots[bc.b] + bc.c;
+        continue;
+
+      case "RET0":
+        return [];
+    }
+  }
+}
+
+Proto.prototype.exec2 = function () {
+  var pc = 0;
+  var offset;
+  for(;;pc++) {
+    switch(opcodes[this.bc[offset = pc * 4]]) {
+
+      case "TDUP":
+        var a = this.bc[offset + 1];
+        var d = this.bc.readUInt16LE(offset + 2);
+        d = this.constants[this.constants.length - d - 1];
+        this.slots[a] = JSON.parse(JSON.stringify(d));
+        continue;
+
+      case "KSHORT":
+        var a = this.bc[offset + 1];
+        var d = this.bc.readInt16LE(offset + 2);
+        this.slots[a] = d;
+        continue;
+
+      case "GGET":
+        var a = this.bc[offset + 1];
+        var d = this.bc.readUInt16LE(offset + 2);
+        d = this.constants[this.constants.length - d - 1];
+        this.slots[a] = this.env[d];
+        continue;
+
+      case "KSTR":
+        var a = this.bc[offset + 1];
+        var d = this.bc.readUInt16LE(offset + 2);
+        d = this.constants[this.constants.length - d - 1];
+        this.slots[a] = d;
+        continue;
+
+      case "CALL":
+        var a = this.bc[offset + 1];
+        var b = this.bc[offset + 3];
+        var c = this.bc[offset + 2];
+        var args = this.slots.slice(a + 1, a + c);
+        var ret = this.slots[a].apply(null, args);
+        for (var i = 0; i < b - 1; i++) {
+          this.slots[a + i] = ret[i];
+        }
+        continue;
+
+      case "TGETV":
+        var a = this.bc[offset + 1];
+        var b = this.bc[offset + 3];
+        var c = this.bc[offset + 2];
+        this.slots[a] = this.slots[b][this.slots[c]];
+        continue;
+
+      case "ISF":
+        var d = this.bc.readUInt16LE(offset + 2);
+        d = this.slots[d];
+        if (!(d === null || d == false || d == undefined)) {
+          pc++;
+        }
+        continue;
+
+      case "JMP":
+        var d = this.bc.readUInt16LE(offset + 2) - 0x8000;
+        pc += d;
+        continue;
+
+      case "LOOP":
+        continue;
+
+      case "ADDVN":
+        var a = this.bc[offset + 1];
+        var b = this.bc[offset + 3];
+        var c = this.bc[offset + 2];
+        c = this.constants[c];
+        this.slots[a] = this.slots[b] + c;
+        continue;
+
+      case "RET0":
+        return [];
+    }
+  }
+}
+
 Proto.prototype.execute = function () {
   this.pc = 0;
+  var offset;
   var ret;
-  while (!(ret = this[opcodes[this.bc[offset = this.pc * 4]]](offset))) {}
+  while (!(ret = this[opcodes[this.bc[offset = this.pc * 4]]](offset))) { this.pc++; }
   return ret;
 }
 
@@ -254,27 +546,23 @@ Proto.prototype.TDUP = function (offset) {
   var d = this.bc.readUInt16LE(offset + 2);
   d = this.constants[this.constants.length - d - 1];
   this.slots[a] = JSON.parse(JSON.stringify(d));
-  this.pc++;
 };
 Proto.prototype.KSHORT = function (offset) {
   var a = this.bc[offset + 1];
   var d = this.bc.readInt16LE(offset + 2);
   this.slots[a] = d;
-  this.pc++;
 };
 Proto.prototype.GGET = function (offset) {
   var a = this.bc[offset + 1];
   var d = this.bc.readUInt16LE(offset + 2);
   d = this.constants[this.constants.length - d - 1];
   this.slots[a] = this.env[d];
-  this.pc++;
 };
 Proto.prototype.KSTR = function (offset) {
   var a = this.bc[offset + 1];
   var d = this.bc.readUInt16LE(offset + 2);
   d = this.constants[this.constants.length - d - 1];
   this.slots[a] = d;
-  this.pc++;
 };
 Proto.prototype.CALL = function (offset) {
   var a = this.bc[offset + 1];
@@ -285,33 +573,27 @@ Proto.prototype.CALL = function (offset) {
   for (var i = 0; i < b - 1; i++) {
     this.slots[a + i] = ret[i];
   }
-  this.pc++;
 };
 Proto.prototype.TGETV = function (offset) {
   var a = this.bc[offset + 1];
   var b = this.bc[offset + 3];
   var c = this.bc[offset + 2];
   this.slots[a] = this.slots[b][this.slots[c]];
-  this.pc++;
 };
 Proto.prototype.ISF = function (offset) {
   var d = this.bc.readUInt16LE(offset + 2);
   d = this.slots[d];
-  if (d === null || d == false || d == undefined) {
+  if (!(d === null || d == false || d == undefined)) {
     this.pc++;
-  }
-  else {
-    this.pc += 2;
   }
 };
 
 Proto.prototype.JMP = function (offset) {
-  var d = this.bc.readUInt16LE(offset + 2) - 0x8000 + 1;
+  var d = this.bc.readUInt16LE(offset + 2) - 0x8000;
   this.pc += d;
 };
 
 Proto.prototype.LOOP = function (offset) {
-  this.pc++;
 };
 
 Proto.prototype.ADDVN = function (offset) {
@@ -320,7 +602,6 @@ Proto.prototype.ADDVN = function (offset) {
   var c = this.bc[offset + 2];
   c = this.constants[c];
   this.slots[a] = this.slots[b] + c;
-  this.pc++;
 };
 
 Proto.prototype.RET0 = function (offset) {
@@ -370,7 +651,10 @@ var p = new Proto(new Buffer([
 
 //fn0.apply(_G, []);
 
-p.execute();
+p.exec3();
+
+// p.execute();
+
   </script>
 </body>
 </head>
