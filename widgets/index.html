@@ -8,29 +8,369 @@
   <script src="/browser-buffer.js"></script>
   <script src="/brozula.js"></script>
   <script>
-    function load(url, callback) {
-      var xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
-      xhr.responseType = 'arraybuffer';
+//    function load(url, callback) {
+//      var xhr = new XMLHttpRequest();
+//      xhr.open('GET', url, true);
+//      xhr.responseType = 'arraybuffer';
+//
+//      xhr.onload = function(e) {
+//        var buffer = Buffer(this.response);
+//        var program = brozula.compile(buffer);
+//        var fn = new Function(program);
+//        callback(null, fn);
+//      };
+//      xhr.send();
+//    }
+//
+//    load("dombuilder.luax", function (err, fn) {
+//      if (err) throw err;
+//      window.domBuilder = fn()[0];
+//      load("app.luax", function (err, fn) {
+//        if (err) throw err;
+//        fn();
+//      });
+//    });
 
-      xhr.onload = function(e) {
-        var buffer = Buffer(this.response);
-        var program = brozula.compile(buffer);
-        var fn = new Function(program);
-        callback(null, fn);
-      };
-      xhr.send();
+function fn0() {
+  var $, $$, $0, $1, $2, $3;
+  var state = "0";
+  for(;;) {
+    loop: switch(state) {
+    case "0":
+      $0 = [null,"This","is","a","stream?"];
+      $1 = 0x1;
+      $2 = this["print"];
+      $3 = "before";
+      $2($3);
+    case "5":
+      $2 = $0[$1];
+      if (!$2) { state = "e"; break loop; }
+      // LOOP
+      $2 = this["print"];
+      $3 = $0[$1];
+      $2($3);
+      $1 = $1 + 1;
+      state = "5"; break loop;
+    case "e":
+      $2 = this["print"];
+      $3 = "after";
+      $2($3);
+      return [];
     }
+  }
+}
 
-    load("dombuilder.luax", function (err, fn) {
-      if (err) throw err;
-      window.domBuilder = fn()[0];
-      load("app.luax", function (err, fn) {
-        if (err) throw err;
-        fn();
-      });
-    });
+// Used to consume bytes from a bytecode stream
+function Parser(buffer) {
+  this.buffer = buffer;
+  this.index = 0;
+  this.mark = 0;
+}
+Parser.prototype.B = function () {
+  return this.buffer[this.index++];
+};
+// Consume 16 bit value from stream and move pointer
+Parser.prototype.H = function () {
+  var value = this.buffer.readUInt16LE(this.index);
+  this.index += 2;
+  return value;
+};
+// Consume 32 bit value from stream and move pointer
+Parser.prototype.W = function () {
+  var value = this.buffer.readUInt32LE(this.index);
+  this.index += 4;
+  return value;
+};
+// Decode ULEB128 from the stream
+// http://en.wikipedia.org/wiki/LEB128
+Parser.prototype.U = function () {
+  var value = 0;
+  var shift = 0;
+  do {
+    var byte = this.buffer[this.index++];
+    value |= (byte & 0x7f) << shift;
+    shift += 7;
+  } while (byte >= 0x80);
+  return value >>> 0;
+};
 
+// For mapping enum integer values to opcode names
+var opcodes = [
+  "ISLT", "ISGE", "ISLE", "ISGT", "ISEQV", "ISNEV", "ISEQS", "ISNES", "ISEQN",
+  "ISNEN", "ISEQP", "ISNEP", "ISTC", "ISFC", "IST", "ISF", "MOV", "NOT", "UNM",
+  "LEN", "ADDVN", "SUBVN", "MULVN", "DIVVN", "MODVN", "ADDNV", "SUBNV", "MULNV",
+  "DIVNV", "MODNV", "ADDVV", "SUBVV", "MULVV", "DIVVV", "MODVV", "POW", "CAT",
+  "KSTR", "KCDATA", "KSHORT", "KNUM", "KPRI", "KNIL", "UGET", "USETV", "USETS",
+  "USETN", "USETP", "UCLO", "FNEW", "TNEW", "TDUP", "GGET", "GSET", "TGETV",
+  "TGETS", "TGETB", "TSETV", "TSETS", "TSETB", "TSETM", "CALLM", "CALL",
+  "CALLMT", "CALLT", "ITERC", "ITERN", "VARG", "ISNEXT", "RETM", "RET", "RET0",
+  "RET1", "FORI", "JFORI", "FORL", "IFORL", "JFORL", "ITERL", "IITERL",
+  "JITERL", "LOOP", "ILOOP", "JLOOP", "JMP", "FUNCF", "IFUNCF", "JFUNCF",
+  "FUNCV", "IFUNCV", "JFUNCV", "FUNCC", "FUNCCW"
+];
+
+var kgctypes = ["CHILD", "TAB", "I64", "U64", "COMPLEX", "STR"];
+var ktabtypes = ["NIL", "FALSE", "TRUE", "INT", "NUM", "STR"];
+
+var kgcdecs = {
+  TAB: function (parser) {
+    var narray = parser.U();
+    var nhash = parser.U();
+    if (narray) {
+      if (nhash) {
+        throw new Error("TODO: implement mixed tables");
+      }
+      var tab = new Array(narray);
+      for (var i = 0; i < narray; i++) {
+        tab[i] = readktabk(parser);
+      }
+      return tab;
+    }
+    if (nhash) {
+      var tab = {};
+      for (var i = 0; i < nhash; i++) {
+        var key = readktabk(parser);
+        if (typeof key !== "string") throw new Error("TODO: Implement non-string keys");
+        tab[key] = readktabk(parser);
+      }
+      return tab
+    }
+    return {};
+  },
+  I64: function (parser) {
+    throw new Error("TODO: Implement I64 kgc decoder");
+  },
+  U64: function (parser) {
+    throw new Error("TODO: Implement U64 kgc decoder");
+  },
+  COMPLEX: function (parser) {
+    throw new Error("TODO: Implement COMPLEX kgc decoder");
+  },
+  STR: function (parser, len) {
+    len -= 5; // Offset for STR enum
+    var value = parser.buffer.slice(parser.index, parser.index + len).toString();
+    parser.index += len;
+    return value;
+  }
+};
+var ktabdecs = {
+  NIL: function (parser) {
+    return null;
+  },
+  FALSE: function (parser) {
+    return false;
+  },
+  TRUE: function (parser) {
+    return true;
+  },
+  INT: function (parser) {
+    return parser.U();
+  },
+  NUM: readknum,
+  STR: kgcdecs.STR
+};
+
+// Read a constant table key or value
+function readktabk(parser) {
+  var ktabtype = parser.U();
+  return ktabdecs[ktabtypes[ktabtype] || "STR"](parser, ktabtype);
+}
+
+function readknum(parser) {
+  var isnum = parser.buffer[parser.index] & 1;
+  var lo = parser.U() >> 1;
+  if (isnum) {
+    var buf = new Buffer(8);
+    var hi = parser.U();
+    buf.writeUInt32LE(lo >>> 0, 0);
+    buf.writeUInt32LE(hi, 4);
+    var num = buf.readDoubleLE(0);
+    return num;
+  }
+  return lo;
+}
+
+
+function Env() {}
+Env.prototype.print = function () {
+
+}
+
+function Proto(buffer, env) {
+  this.env = env || {};
+  var parser = new Parser(buffer);
+
+  // flagsB numparamsB framesizeB numuvB numkgcU numknU numbcU [debuglenU [firstlineU numlineU]]
+  var flags = parser.B();
+  var numparams = parser.B();
+  var framesize = parser.B();
+  var numuv = parser.B();
+  var numkgc = parser.U();
+  var numkn = parser.U();
+  var numbc = parser.U();
+
+  // bcinsW* uvdataH* kgc* knum*
+  this.bc = buffer.slice(parser.index, parser.index + numbc * 4);
+  parser.index += numbc * 4;
+
+  var uvdata = new Array(numuv);
+  for (var i = 0; i < numuv; i++) {
+    uvdata[i] = parser.H();
+  }
+  var constants = new Array(numkgc + numkn);
+//  var childc = protoIndex;
+  for (var i = 0; i < numkgc; i++) {
+    var kgctype = parser.U();
+    var type = kgctypes[kgctype] || "STR";
+    if (type === "CHILD") {
+      constants[i + numkn] = --childc;
+    }
+    else {
+      constants[i + numkn] = kgcdecs[type](parser, kgctype);
+    }
+  }
+  for (var i = 0; i < numkn; i++) {
+    constants[i] = readknum(parser);
+  }
+
+  // Make sure we consumed all the bytes properly
+  if (parser.index !== buffer.length) throw new Error((buffer.length - parser.index) + " bytes leftover");
+
+
+  this.slots = new Array(framesize);
+  this.uvdata = uvdata;
+  this.constants = constants;
+}
+
+Proto.prototype.execute = function () {
+  this.pc = 0;
+  var ret;
+  while (!(ret = this[opcodes[this.bc[offset = this.pc * 4]]](offset))) {}
+  return ret;
+}
+
+Proto.prototype.TDUP = function (offset) {
+  var a = this.bc[offset + 1];
+  var d = this.bc.readUInt16LE(offset + 2);
+  d = this.constants[this.constants.length - d - 1];
+  this.slots[a] = JSON.parse(JSON.stringify(d));
+  this.pc++;
+};
+Proto.prototype.KSHORT = function (offset) {
+  var a = this.bc[offset + 1];
+  var d = this.bc.readInt16LE(offset + 2);
+  this.slots[a] = d;
+  this.pc++;
+};
+Proto.prototype.GGET = function (offset) {
+  var a = this.bc[offset + 1];
+  var d = this.bc.readUInt16LE(offset + 2);
+  d = this.constants[this.constants.length - d - 1];
+  this.slots[a] = this.env[d];
+  this.pc++;
+};
+Proto.prototype.KSTR = function (offset) {
+  var a = this.bc[offset + 1];
+  var d = this.bc.readUInt16LE(offset + 2);
+  d = this.constants[this.constants.length - d - 1];
+  this.slots[a] = d;
+  this.pc++;
+};
+Proto.prototype.CALL = function (offset) {
+  var a = this.bc[offset + 1];
+  var b = this.bc[offset + 3];
+  var c = this.bc[offset + 2];
+  var args = this.slots.slice(a + 1, a + c);
+  var ret = this.slots[a].apply(null, args);
+  for (var i = 0; i < b - 1; i++) {
+    this.slots[a + i] = ret[i];
+  }
+  this.pc++;
+};
+Proto.prototype.TGETV = function (offset) {
+  var a = this.bc[offset + 1];
+  var b = this.bc[offset + 3];
+  var c = this.bc[offset + 2];
+  this.slots[a] = this.slots[b][this.slots[c]];
+  this.pc++;
+};
+Proto.prototype.ISF = function (offset) {
+  var d = this.bc.readUInt16LE(offset + 2);
+  d = this.slots[d];
+  if (d === null || d == false || d == undefined) {
+    this.pc++;
+  }
+  else {
+    this.pc += 2;
+  }
+};
+
+Proto.prototype.JMP = function (offset) {
+  var d = this.bc.readUInt16LE(offset + 2) - 0x8000 + 1;
+  this.pc += d;
+};
+
+Proto.prototype.LOOP = function (offset) {
+  this.pc++;
+};
+
+Proto.prototype.ADDVN = function (offset) {
+  var a = this.bc[offset + 1];
+  var b = this.bc[offset + 3];
+  var c = this.bc[offset + 2];
+  c = this.constants[c];
+  this.slots[a] = this.slots[b] + c;
+  this.pc++;
+};
+
+Proto.prototype.RET0 = function (offset) {
+  return [];
+};
+
+// Set up some global functions
+var _G = {
+  print: function () {
+    console.log(Array.prototype.join.call(arguments, " "));
+    return [];
+  }
+};
+
+var _G2 = {
+  print: function () {
+    //console.log(Array.prototype.join.call(arguments, " "));
+    return [];
+  }
+};
+
+var p = new Proto(new Buffer([
+  2,0,4,0,4,1,18, // HEADER
+  51,0,0,0,       // TDUP     0  0
+  39,1,1,0,       // KSHORT   1  1
+  52,2,1,0,       // GGET     2  1     print
+  37,3,2,0,       // KSTR     3  2     before
+  62,2,2,1,       // CALL     2  1  2
+  54,2,1,0,       // TGETV    2  0  1
+  15,0,2,0,       // ISF         2
+  84,3,6,128,     // JMP      3 +7
+  81,2,5,128,     // LOOP     2 +6
+  52,2,1,0,       // GGET     2  1     print
+  54,3,1,0,       // TGETV    3  0  1
+  62,2,2,1,       // CALL     2  1  2
+  20,1,0,1,       // ADDVN    1  1  0  1
+  84,2,247,127,   // JMP      2 -8
+  52,2,1,0,       // GGET     2  1     print
+  37,3,3,0,       // KSTR     3  3     after
+  62,2,2,1,       // CALL     2  1  2
+  71,0,1,0,       // RET0     0  1
+  10,97,102,116,101,114,     // "after"
+  11,98,101,102,111,114,101, // "before"
+  10,112,114,105,110,116,    // "print"
+  1,5,0,0,9,84,104,105,115,7,105,115,6,97,12,115,116,114,101,97,109,63,
+  2]), _G);
+
+//fn0.apply(_G, []);
+
+p.execute();
   </script>
 </body>
 </head>
