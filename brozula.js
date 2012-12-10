@@ -516,14 +516,20 @@ var builtins = (function () {
   }
 
   function next(tab, key) {
+    var isNull = key === undefined || key === null;
     if (Array.isArray(tab)) {
+      if (isNull) key = 0;
       return inext(tab, key);
     }
-    var isNull = key === undefined || key === null;
     var keys = Object.keys(tab);
-    var index, newKey;
-    if (keys.length && (index = keys.indexOf(key)) + 1 &&
-        tab.hasOwnProperty(newKey = keys[index])) {
+    var newKey;
+    if (isNull) {
+      newKey = keys[0];
+      return [newKey, tab[newKey]];
+    }
+    var index = keys.indexOf(key) + 1;
+    if (index) {
+      newKey = keys[index];
       return [newKey, tab[newKey]];
     }
     return [];
@@ -872,13 +878,13 @@ var generators = {
     return "newindex(this," + slot(a) + "," + JSON.stringify(d) + ");";
   },
   TGETV: function (a, b, c) {
-    return slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
+    return slot(a) + "=index(" + slot(b) + "," + slot(c) + ");";
   },
   TGETS: function (a, b, c) {
-    return slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
+    return slot(a) + "=index(" + slot(b) + "," + JSON.stringify(c) + ");";
   },
   TGETB: function (a, b, c) {
-    return slot(b) + ";" + slot(a) + "=index(" + slot(b) + "," + c + ");";
+    return slot(a) + "=index(" + slot(b) + "," + c + ");";
   },
   TSETV: function (a, b, c) {
     return "newindex(" + slot(b) + "," + slot(c) + "," + slot(a) + ");";
@@ -889,8 +895,12 @@ var generators = {
   TSETB: function (a, b, c) {
     return "newindex(" + slot(b) + "," + c + "," + slot(a) + ");";
   },
-  TSETM: function () {
-    return 'throw new Error("TODO: Implement TSETM");';
+  TSETM: function (a, d) {
+    var b = new Buffer(8);
+    b.writeDoubleLE(d, 0);
+    d = b.readUInt32LE(0);
+    return '$.forEach(function(v,i){' + slot(a-1) + '[i+' + d + '];});' +
+           '$=undefined;';
   },
   CALLM: function (a, b, c) {
     var args;
@@ -993,7 +1003,7 @@ var generators = {
       slot(a) + "=" + slot(a - 3) + ";" +
       slot(a + 1) + "=" + slot(a - 2) + ";" +
       slot(a + 2) + "=" + slot(a - 1) + ";";
-    var fn = slot(a - 3) + "(next," + slot(a - 1) + ")";
+    var fn = "next(" + slot(a - 2) + "," + slot(a - 1) + ")";
     if (b === 0) { // multires
       this.need$ = true;
       return line + "$=" + fn + ";";
@@ -1015,8 +1025,10 @@ var generators = {
   VARG: function () {
     return 'throw new Error("TODO: Implement VARG");';
   },
-  ISNEXT: function () {
-    return 'throw new Error("TODO: Implement ISNEXT");';
+  ISNEXT: function (a, d) {
+    return 'if('+ slot(a - 3) + '===next&&rawType(' + slot(a - 2) + ')==="table"&&' + slot(a - 1) + '===null)' +
+             '{state=' + stateLabel(d) + ';break;}' +
+           'else{throw"TODO: Implement ISNEXT failure";}';
   },
   RETM: function () {
     return 'throw new Error("TODO: Implement RETM");';
