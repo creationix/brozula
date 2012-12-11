@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-var brozula = require('../brozula');
+var parse = require('./parser');
+var interpret = require('./interpreter');
+var runtime = require('./runtime');
 var nopt = require("nopt");
 var execFile = require("child_process").execFile;
 var readFile = require('fs').readFile;
@@ -63,7 +65,7 @@ function compile(path, callback) {
   function generate(buffer) {
     var program;
     try {
-      program = brozula.compile(buffer);
+      program = parse(buffer);
     }
     catch (err) {
       return callback(err);
@@ -171,48 +173,50 @@ else {
 
 
   filename = pathResolve(process.cwd(), filename);
-  compile(filename, function (err, program) {
+  compile(filename, function (err, protos) {
     if (err) throw err;
-    program = "(function () {\n\n" + program + "\n\n}());";
-    if (options.uglify) {
-      var UglifyJS = require("uglify-js");
-      var toplevel_ast = UglifyJS.parse(program);
-      toplevel_ast.figure_out_scope();
-      var compressor = UglifyJS.Compressor({});
-      var compressed_ast = toplevel_ast.transform(compressor);
-      compressed_ast.figure_out_scope();
-      compressed_ast.compute_char_frequency();
-      compressed_ast.mangle_names();
-      program = compressed_ast.print_to_string({});
-    }
-    if (options.beautify) {
-      var UglifyJS = require("uglify-js");
-      var toplevel_ast = UglifyJS.parse(program);
-      toplevel_ast.figure_out_scope();
-      program = toplevel_ast.print_to_string({
-        beautify: true,
-        indent_level: 2
-      });
-    }
-    if (options.print) {
-      if (options.lines) {
-        var lines = program.split("\n");
-        var digits = Math.ceil(Math.log(lines.length) / Math.LN10);
-        var padding = "";
-        for (var i = 0; i < digits; i++) {
-          padding += "0";
-        }
-        console.log(lines.map(function (line, i) {
-          var num = (i + 1) + "";
-          return "\033[34m" + padding.substr(num.length) + num + "\033[0m " + line;
-        }).join("\n"));
-      }
-      else {
-        console.log(program);
-      }
-    }
-    if (options.execute) {
-      eval(program);
-    }
+    var program = interpret(protos, protos.length - 1, runtime);
+    program();
+//    program = "(function () {\n\n" + program + "\n\n}());";
+//    if (options.uglify) {
+//      var UglifyJS = require("uglify-js");
+//      var toplevel_ast = UglifyJS.parse(program);
+//      toplevel_ast.figure_out_scope();
+//      var compressor = UglifyJS.Compressor({});
+//      var compressed_ast = toplevel_ast.transform(compressor);
+//      compressed_ast.figure_out_scope();
+//      compressed_ast.compute_char_frequency();
+//      compressed_ast.mangle_names();
+//      program = compressed_ast.print_to_string({});
+//    }
+//    if (options.beautify) {
+//      var UglifyJS = require("uglify-js");
+//      var toplevel_ast = UglifyJS.parse(program);
+//      toplevel_ast.figure_out_scope();
+//      program = toplevel_ast.print_to_string({
+//        beautify: true,
+//        indent_level: 2
+//      });
+//    }
+//    if (options.print) {
+//      if (options.lines) {
+//        var lines = program.split("\n");
+//        var digits = Math.ceil(Math.log(lines.length) / Math.LN10);
+//        var padding = "";
+//        for (var i = 0; i < digits; i++) {
+//          padding += "0";
+//        }
+//        console.log(lines.map(function (line, i) {
+//          var num = (i + 1) + "";
+//          return "\033[34m" + padding.substr(num.length) + num + "\033[0m " + line;
+//        }).join("\n"));
+//      }
+//      else {
+//        console.log(program);
+//      }
+//    }
+//    if (options.execute) {
+//      eval(program);
+//    }
   });
 }
