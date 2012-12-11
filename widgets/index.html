@@ -344,7 +344,7 @@ function Proto(buffer, env) {
         return constants[constants.length - val - 1];
       case "uv": return uvdata[val];
       case "jump":
-        return val - 0x8000;
+        return val- 0x8000;
       default:
         return val;
     }
@@ -358,16 +358,16 @@ function Proto(buffer, env) {
       op: opcode,
     };
     if (def.ma) {
-      op.a = parseArg(def.ma, (word >> 8) & 0xff, i);
+      op.a = parseArg(def.ma, (word >>> 8) & 0xff, i);
     }
     if (def.mb) {
-      op.b = parseArg(def.mb, word >> 24, i);
+      op.b = parseArg(def.mb, word >>> 24, i);
     }
     if (def.mc) {
-      op.c = parseArg(def.mc, (word >> 16) & 0xff, i);
+      op.c = parseArg(def.mc, (word >>> 16) & 0xff, i);
     }
     if (def.md) {
-      op.d = parseArg(def.mc, word >> 16, i);
+      op.d = parseArg(def.md, word >>> 16, i);
     }
     return op;
   });
@@ -378,30 +378,34 @@ function Proto(buffer, env) {
   this.constants = constants;
 }
 
+function clone(original) {
+  var keys = Object.keys(obj);
+  var obj = {};
+  for (var i = 0, l = keys.length; i < l; i++) {
+    var key = keys[i];
+    obj[key] = original[key];
+  }
+  return obj;
+}
+
+function arrCopy(arr, data, offset, length) {
+  for (var i = 0; i < length; i++) {
+    arr[i + offset] = data[i];
+  }
+}
+
+function falsy(val) {
+  return val === false || val === null || val === undefined;
+}
 Proto.prototype.exec3 = function () {
   var pc = 0;
   var offset;
-  for(;;pc++) {
-    var bc = this.bcins[pc];
+  for(;;) {
+    var bc = this.bcins[pc++];
     switch(bc.op) {
 
       case "TDUP":
-        var p = bc.d, tab;
-        if (Array.isArray(p)) {
-          tab = new Array(p.length);
-          for (var i = 0, l = p.length; i < l; i++) {
-            tab[i] = p[i];
-          }
-        }
-        else {
-          tab = {};
-          var keys = Object.keys(p);
-          for (var i = 0, l = keys.length; i < l; i++) {
-            var key = keys[i];
-            tab[key] = p[key];
-          }
-        }
-        this.slots[bc.a] = tab;
+        this.slots[bc.a] = Array.isArray(bc.d) ? bc.d.slice(0) : clone(bc.d);
         continue;
 
       case "KSHORT":
@@ -417,11 +421,7 @@ Proto.prototype.exec3 = function () {
         continue;
 
       case "CALL":
-        var args = this.slots.slice(bc.a + 1, bc.a + bc.c);
-        var ret = this.slots[bc.a].apply(null, args);
-        for (var i = 0, l = bc.b - 1; i < l; i++) {
-          this.slots[bc.a + i] = ret[i];
-        }
+        arrCopy(this.slots, this.slots[bc.a].apply(null, this.slots.slice(bc.a + 1, bc.a + bc.c)), bc.a, bc.b - 1);
         continue;
 
       case "TGETV":
@@ -429,10 +429,7 @@ Proto.prototype.exec3 = function () {
         continue;
 
       case "ISF":
-        var expr = this.slots[bc.d];
-        if (!(expr === null || expr == false || expr == undefined)) {
-          pc++;
-        }
+        if (!falsy(this.slots[bc.d])) { pc++; }
         continue;
 
       case "JMP":
@@ -448,6 +445,9 @@ Proto.prototype.exec3 = function () {
 
       case "RET0":
         return [];
+
+      default:
+        throw new Error("TODO: Implement " + bc.op);
     }
   }
 }
@@ -622,8 +622,7 @@ var _G2 = {
     return [];
   }
 };
-
-var p = new Proto(new Buffer([
+var program = new Buffer([
   2,0,4,0,4,1,18, // HEADER
   51,0,0,0,       // TDUP     0  0
   39,1,1,0,       // KSHORT   1  1
@@ -647,7 +646,11 @@ var p = new Proto(new Buffer([
   11,98,101,102,111,114,101, // "before"
   10,112,114,105,110,116,    // "print"
   1,5,0,0,9,84,104,105,115,7,105,115,6,97,12,115,116,114,101,97,109,63,
-  2]), _G);
+  2]
+);
+
+var p = new Proto(program, _G);
+var p2 = new Proto(program, _G2);
 
 //fn0.apply(_G, []);
 
