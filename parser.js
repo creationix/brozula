@@ -289,7 +289,7 @@ function readproto(buffer, protoIndex) {
   function parseArg(type, val, i) {
     switch (type) {
       case "lit": return val >>> 0;
-      case "lits": return val >> 0;
+      case "lits": return val & 0x8000 ? val - 0x10000 : val;
       case "pri": return val === 0 ? null : val === 1 ? false : true;
       case "num": return constants[val];
       case "str": case "tab": case "func": case "cdata":
