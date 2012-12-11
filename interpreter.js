@@ -79,7 +79,7 @@ function interpret(protos, protoIndex, env) { return function () {
   var cmp, bc, i, multires;
   for(;;) {
     bc = bcins[pc++];
-    console.log(pc - 1, bc);
+//    console.log(protoIndex, pc - 1, slots, multires, bc);
     switch (bc.op) {
       case "ISLT":
         if (!lt(slots[bc.a], slots[bc.d])) { pc++; }
@@ -251,7 +251,8 @@ function interpret(protos, protoIndex, env) { return function () {
         throw new Error("TODO: Implement USETP");
 
       case "UCLO":
-        throw new Error("TODO: Implement UCLO");
+        continue;
+//        throw new Error("TODO: Implement UCLO");
 
       case "FNEW":
         slots[bc.a] = interpret(protos, bc.d, env);
@@ -349,7 +350,7 @@ function interpret(protos, protoIndex, env) { return function () {
         return slots[bc.a].apply(null, multires);
 
       case "CALLT":
-        return slots[bc.a].apply(null, slots.slice(bc.a + 1, bc.a + bc.c));
+        return slots[bc.a].apply(null, slots.slice(bc.a + 1, bc.a + bc.d));
 
       case "ITERC":
         slots[bc.a] = slots[bc.a - 3];
