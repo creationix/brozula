@@ -97,8 +97,14 @@ if (options.serve) {
   console.log("BASE", base);
   var server = require('http').createServer(function (req, res) {
     var url = urlParse(req.url);
-    if (url.pathname === "/brozula.js") {
-      return send(req, pathJoin(__dirname, "/brozula.js")).pipe(res);
+    if (url.pathname === "/parser.js") {
+      return send(req, pathJoin(__dirname, "/parser.js")).pipe(res);
+    }
+    if (url.pathname === "/interpreter.js") {
+      return send(req, pathJoin(__dirname, "/interpreter.js")).pipe(res);
+    }
+    if (url.pathname === "/runtime.js") {
+      return send(req, pathJoin(__dirname, "/runtime.js")).pipe(res);
     }
     if (url.pathname === "/browser-buffer.js") {
       return send(req, pathJoin(__dirname, "/browser-buffer.js")).pipe(res);

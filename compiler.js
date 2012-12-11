@@ -1,7 +1,7 @@
 ( // Module boilerplate to support browser globals, node.js and AMD.
   (typeof module !== "undefined" && function (m) { module.exports = m(); }) ||
   (typeof define === "function" && function (m) { define(m); }) ||
-  (function (m) { window.brozula = window.brozila || {}; window.brozula.compile = m(); })
+  (function (m) { window.brozula = window.brozula || {}; window.brozula.compile = m(); })
 )(function () {
 "use strict";
 
