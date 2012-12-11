@@ -242,6 +242,7 @@ function parse(buffer) {
   if (parser.U() !== 0) throw new Error("Missing 0U at end of file");
   if (parser.index < buffer.length) throw new Error((length - parser.index) + " bytes leftover");
 
+//  console.log(require('util').inspect(protos, false, 3, true));
   return protos;
 
 }
@@ -268,7 +269,7 @@ function readproto(buffer, protoIndex) {
     uvdata[i] = parser.H();
   }
   var constants = new Array(numkgc + numkn);
-  var childc = protoIndex;
+  var childc = protoIndex + 1;
   for (var i = 0; i < numkgc; i++) {
     var kgctype = parser.U();
     var type = kgctypes[kgctype] || "STR";
