@@ -184,8 +184,12 @@ else {
   filename = pathResolve(process.cwd(), filename);
   compile(filename, function (err, protos) {
     if (err) throw err;
-    var program = new Closure(protos[protos.length - 1]);
-    program.execute(globals);
+    if (options.print) {
+      console.log(require('util').inspect(protos, false, 3 + (options.beautify ? 2 : 0), true) + "\n");
+    }
+    if (options.execute) {
+      (new Closure(protos[protos.length - 1])).execute(globals);
+    }
 //    program = "(function () {\n\n" + program + "\n\n}());";
 //    if (options.uglify) {
 //      var UglifyJS = require("uglify-js");
