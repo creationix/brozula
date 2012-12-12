@@ -170,7 +170,7 @@ function len(op) {
     return op.length;
   }
   if (t === "table") {
-    if (Array.isArray(op)) return op.length;
+    if (Array.isArray(op)) return op.length - 1;
     return 0;
   }
   var h = getmetamethod(op, "__len");
