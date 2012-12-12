@@ -6,6 +6,7 @@
 
 // Metatmethods
 function lt(op1, op2) {
+
   // TODO: check metamethods
   return op1 < op2;
 }
@@ -87,8 +88,16 @@ function pow(op1, op2) {
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function concat(op1, op2) {
-  // TODO: check metamethods
-  return "" + op1 + op2;
+  var t1 = typeof op1;
+  var t2 = typeof op2;
+  if ((t1 === "string" || t1 === "number") && (t2 === "string" || t2 === "number")) {
+    return "" + op1 + op2;
+  }
+  var h = getbinhandler(op1, op2, "__concat");
+  if (h) {
+    return h(op1, op2);
+  }
+  throw "attempt to concatenate a " + type(op1) + " value";
 }
 function gc(tab) {
   // TODO: check metamethods
