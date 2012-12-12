@@ -4,13 +4,137 @@
   (function (m) { window.brozula = window.brozula || {}; window.brozula.runtime = m(); })
 )(function () {
 
+  var patternClasses = {
+    "%a": "A-Za-z",
+    "%A": "^A-Za-z",
+    "%p": "\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e",
+    "%P": "^\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e",
+    "%s": "\x09-\x0d\x20",
+    "%S": "^\x09-\x0d\x20",
+    "%u": "A-Z",
+    "%U": "^A-Z",
+    "%d": "0-9",
+    "%D": "^0-9",
+    "%w": "0-9A-Za-z",
+    "%W": "^0-9A-Za-z",
+    "%x": "0-9A-Fa-f",
+    "%X": "^0-9A-Fa-f",
+    "%z": "\x00",
+    "%Z": "^\x00",
+    "%l": "a-z",
+    "%L": "^a-z",
+    "%c": "\x00-\x1f\x7f",
+    "%C": "^\x00-\x1f\x7f"
+  };
+
+function patternToRegExp(pattern, flags) {
+  pattern = pattern.replace(/%./g, function (match) {
+    var cls = patternClasses[match];
+    if (cls) return cls;
+    return match.substr(1);
+  }).replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+  return new RegExp(pattern, flags);
+}
+
+var string = {
+  byte: function () {
+    throw new Error("TODO: implement string.byte");
+  },
+  char: function () {
+    throw new Error("TODO: implement string.char");
+  },
+  dump: function () {
+    throw new Error("TODO: implement string.dump");
+  },
+  find: function (s, pattern, init, plain) {
+    if (init === null || init === undefined) init = 1;
+    if (plain) {
+      var start = s.indexOf(pattern, init - 1);
+      if (start >= 0) {
+        return [start + 1, start + pattern.length];
+      }
+      return [null];
+    }
+    if (init > 1) s = s.substr(init - 1);
+    var match = s.match(patternToRegExp(pattern));
+    if (match) {
+      return [match.index + init, match.index + init - 1 + match[0].length];
+    }
+    return [null];
+  },
+  format: function () {
+    throw new Error("TODO: implement string.format");
+  },
+  gfind: function () {
+    throw new Error("TODO: implement string.gfind");
+  },
+  gmatch: function (s, pattern) {
+    var regexp = patternToRegExp(pattern, "g");
+    return function () {
+      var m = regexp.exec(s);
+      if (!m) return [];
+      if (m.length > 1) {
+        return Array.prototype.slice.call(m, 1);
+      }
+      return [m[0]];
+    };
+  },
+  gsub: function (s, pattern, repl, n) {
+    // TODO: Implement everything
+    var regexp = patternToRegExp(pattern, "g");
+    s = s.replace(regexp, repl);
+    return [s];
+  },
+  len: function () {
+    throw new Error("TODO: implement string.len");
+  },
+  lower: function () {
+    throw new Error("TODO: implement string.lower");
+  },
+  match: function (s, pattern, init) {
+    if (init) throw new Error("TODO: Implement match init offset");
+    var regexp = patternToRegExp(pattern);
+    var m = s.match(regexp);
+    if (!m) return [];
+    if (m.length > 1) {
+      return Array.prototype.slice.call(m, 1);
+    }
+    return [m[0]];
+  },
+  rep: function (s, n) {
+    var str = "";
+    for (var i = 0; i < n; i++) {
+      str += s;
+    }
+    return str;
+  },
+  reverse: function () {
+    throw new Error("TODO: implement string.reverse");
+  },
+  sub: function (s, i, j) {
+    var start, length;
+    if (i < 0) i = s.length - i;
+    start = i - 1;
+    if (typeof j === "number") {
+      if (j < 0) j = s.length - j;
+      length = j - i + 1;
+    }
+    return [s.substr(start, length)];
+  },
+  upper: function () {
+    throw new Error("TODO: implement string.upper");
+  }
+};
+
+var stringmeta = {__index: string};
+
 // Metatmethods
 function lt(op1, op2) {
   var t1 = type(op1), t2 = type(op2);
   if (t1 === t2) {
     if (t1 === "number" || t1 === "string") return op1 < op2;
     var h = getcomphandler(op1, op2, "__lt");
-    if (h) return h(op1, op2);
+    if (h) return h(op1, op2)[0];
   }
   throw "attempt to compare " + t1 + " with " + t2;
 }
@@ -19,9 +143,9 @@ function le(op1, op2) {
   if (t1 === t2) {
     if (t1 === "number" || t1 === "string") return op1 <= op2;
     var h = getcomphandler(op1, op2, "__le");
-    if (h) return h(op1, op2);
+    if (h) return h(op1, op2)[0];
     h = getcomphandler(op1, op2, "__lt");
-    if (h) return !h(op2, op1);
+    if (h) return !(h(op2, op1)[0]);
   }
   throw "attempt to compare " + t1 + " with " + t2;
 }
@@ -30,14 +154,14 @@ function eq(op1, op2) {
   if (op1 === op2) return true;
   if (t1 !== t2) return false;
   var h = getcomphandler(op1, op2, "__eq");
-  if (h) return h(op1, op2);
+  if (h) return h(op1, op2)[0];
   return false;
 }
 function unm(op) {
   var o = tonumber(op);
   if (typeof o === "number") return -o;
   var h = getmetamethod(op, "__unm");
-  if (h) return h(op);
+  if (h) return h(op)[0];
   throw "attempt to perform arithmetic on a " + type(op) + " value";
 }
 function len(op) {
@@ -51,7 +175,7 @@ function len(op) {
   }
   var h = getmetamethod(op, "__len");
   if (h) {
-    return h(op);
+    return h(op)[0];
   }
   throw new Error("attempt to get length of " + t + " value");
 }
@@ -62,7 +186,9 @@ function add(op1, op2) {
     return o1 + o2;
   }
   var h = getbinhandler(op1, op2, "__add");
-  if (h) return h(op1, op2);
+  if (h) {
+    return h(op1, op2)[0];
+  }
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function sub(op1, op2) {
@@ -71,7 +197,7 @@ function sub(op1, op2) {
     return o1 - o2;
   }
   var h = getbinhandler(op1, op2, "__sub");
-  if (h) return h(op1, op2);
+  if (h) return h(op1, op2)[0];
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function mul(op1, op2) {
@@ -80,7 +206,7 @@ function mul(op1, op2) {
     return o1 * o2;
   }
   var h = getbinhandler(op1, op2, "__mul");
-  if (h) return h(op1, op2);
+  if (h) return h(op1, op2)[0];
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function div(op1, op2) {
@@ -89,7 +215,7 @@ function div(op1, op2) {
     return o1 / o2;
   }
   var h = getbinhandler(op1, op2, "__div");
-  if (h) return h(op1, op2);
+  if (h) return h(op1, op2)[0];
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function mod(op1, op2) {
@@ -98,7 +224,7 @@ function mod(op1, op2) {
     return o1 % o2;
   }
   var h = getbinhandler(op1, op2, "__mod");
-  if (h) return h(op1, op2);
+  if (h) return h(op1, op2)[0];
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function pow(op1, op2) {
@@ -107,7 +233,7 @@ function pow(op1, op2) {
     return Math.pow(o1, o2);
   }
   var h = getbinhandler(op1, op2, "__pow");
-  if (h) return h(op1, op2);
+  if (h) return h(op1, op2)[0];
   throw "attempt to perform arithmetic on a " + type(op1) + " value";
 }
 function concat(op1, op2) {
@@ -118,7 +244,7 @@ function concat(op1, op2) {
   }
   var h = getbinhandler(op1, op2, "__concat");
   if (h) {
-    return h(op1, op2);
+    return h(op1, op2)[0];
   }
   throw "attempt to concatenate a " + type(op1) + " value";
 }
@@ -139,7 +265,7 @@ function index(table, key) {
     if (!h) throw "attempt to index a " + t + " value";
   }
   if (typeof h === "function") {
-    return h(table, key);
+    return h(table, key)[0];
   }
   return index(h, key);
 }
@@ -202,12 +328,28 @@ function rawset(tab, key, val) {
 function setmetatable(tab, meta) {
   var t = type(tab);
   if (t !== "table") throw "table expected, got " + t;
-  tab.__meta__ = meta;
+  Object.defineProperty(tab, "__meta__", {value: meta});
 }
 
 function getmetatable(tab) {
+  var t = type(tab);
+  if (t === "string") return stringmeta;
   if (type(tab) !== "table") return null;
   return tab.__meta__ || null;
+}
+
+var nextID = 1;
+function getpointer(tab) {
+  if (typeof tab === "function" && tab.name) {
+    return tab.name;
+  }
+  var id = tab.__id__;
+  if (id === undefined) {
+    id = (nextID++).toString(16);
+    id = "0x" + "00000000".substr(id.length) + id;
+    Object.defineProperty(tab, "__id__", {value: id});
+  }
+  return id;
 }
 
 function tonumber(val, base) {
@@ -223,6 +365,16 @@ function tonumber(val, base) {
     if (!isNaN(num)) return num;
   }
   return null;
+}
+
+function tostring(val) {
+  var h = getmetamethod(val, "__tostring");
+  if (h) return h(val)[0];
+  var t = type(val);
+  if (t === "table") return "table: " + getpointer(val);
+  if (t === "function") return "function: " + getpointer(val);
+  if (t === null || t === undefined) return "nil";
+  return "" + val;
 }
 
 function getmetamethod(tab, event) {
@@ -251,7 +403,7 @@ return {
   div: div, mod: mod, pow: pow, concat: concat, gc: gc, index: index,
   newindex: newindex, call: call, falsy: falsy, type: type,
   setmetatable: setmetatable, getmetatable: getmetatable, rawget: rawget,
-  rawset: rawset, tonumber: tonumber
+  rawset: rawset, tonumber: tonumber, tostring: tostring, string: string
 };
 
 });

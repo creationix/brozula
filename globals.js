@@ -5,7 +5,6 @@
 )(function (runtime) {
 
 var falsy = runtime.falsy;
-var type = runtime.type;
 var slice = Array.prototype.slice;
 
 function next(tab, key) {
@@ -37,97 +36,66 @@ function inext(tab, key) {
   return [];
 }
 
-function patternToRegExp(pattern, flags) {
-  // TODO: translate lua escapes to js escapes.
-  pattern = pattern.replace(/%(.)/g, "\\$1");
-  return new RegExp(pattern, flags);
-}
-
 var _G = {
   _VERSION: "Lua 5.1",
-  assert: function (expr, message) {
+  assert: function assert(expr, message) {
     if (falsy(expr)) throw message;
     return slice.call(arguments);
   },
   bit: {},
-  collectgarbage: function () { throw new Error("TODO: Implement collectgarbage"); },
+  collectgarbage: function collectgarbage() { throw new Error("TODO: Implement collectgarbage"); },
   coroutine: {},
   debug: {},
-  error: function (message) {
+  error: function error(message) {
     throw message;
   },
-  gcinfo: function () { throw new Error("TODO: Implement gcinfo"); },
-  getfenv: function () { throw new Error("TODO: Implement getfenv"); },
-  getmetatable: function (tab) {
+  gcinfo: function gcinfo() { throw new Error("TODO: Implement gcinfo"); },
+  getfenv: function getfenv() { throw new Error("TODO: Implement getfenv"); },
+  getmetatable: function getmetatable(tab) {
     return [runtime.getmetatable(tab)];
   },
   io: {},
-  ipairs: function (tab) {
+  ipairs: function ipairs(tab) {
     return [inext, tab, 0];
   },
   jit: {},
   math: {},
-  module: function () { throw new Error("TODO: Implement module"); },
-  newproxy: function () { throw new Error("TODO: Implement newproxy"); },
+  module: function module() { throw new Error("TODO: Implement module"); },
+  newproxy: function newproxy() { throw new Error("TODO: Implement newproxy"); },
   next: next,
   os: {},
   package: {},
-  pairs: function (tab) {
+  pairs: function pairs(tab) {
     return [next, tab, null];
   },
-  pcall: function () { throw new Error("TODO: Implement pcall"); },
-  print: function () {
-    console.log(Array.prototype.join.call(arguments, "\t"));
+  pcall: function pcall() { throw new Error("TODO: Implement pcall"); },
+  print: function print() {
+    console.log(Array.prototype.map.call(arguments, runtime.tostring).join("\t"));
     return [];
   },
-  rawequal: function () { throw new Error("TODO: Implement rawequal"); },
-  rawget: function (tab, key) {
+  rawequal: function rawequal() { throw new Error("TODO: Implement rawequal"); },
+  rawget: function rawget(tab, key) {
     return [runtime.rawget(tab, key)];
   },
-  rawset: function (tab, key, val) {
+  rawset: function rawset(tab, key, val) {
     runtime.rawset(tab, key, val);
     return [];
   },
-  require: function () { throw new Error("TODO: Implement require"); },
-  select: function () { throw new Error("TODO: Implement select"); },
-  setfenv: function () { throw new Error("TODO: Implement setfenv"); },
-  setmetatable: function (tab, meta) {
+  require: function require() { throw new Error("TODO: Implement require"); },
+  select: function select(index) {
+    if (typeof index === "number") {
+      return Array.prototype.slice.call(arguments, index);
+    }
+    if (index === "#") {
+      return arguments.length - 1;
+    }
+  },
+  setfenv: function setfenv() { throw new Error("TODO: Implement setfenv"); },
+  setmetatable: function setmetatable(tab, meta) {
     runtime.setmetatable(tab, meta);
     return [tab];
   },
-  string: {
-    match: function (s, pattern, init) {
-      if (init) throw new Error("TODO: Implement match init offset");
-      var regexp = patternToRegExp(pattern);
-      var m = s.match(regexp);
-      if (!m) return [];
-      if (m.length > 1) {
-        return Array.prototype.slice.call(m, 1);
-      }
-      return [m[0]];
-    },
-    gmatch: function (s, pattern) {
-      var regexp = patternToRegExp(pattern, "g");
-      return function () {
-        var m = regexp.exec(s);
-        if (!m) return [];
-        if (m.length > 1) {
-          return Array.prototype.slice.call(m, 1);
-        }
-        return [m[0]];
-      };
-    },
-    sub: function (s, i, j) {
-      var start, length;
-      if (i < 0) i = s.length - i;
-      start = i - 1;
-      if (typeof j === "number") {
-        if (j < 0) j = s.length - j;
-        length = j - i + 1;
-      }
-      return [s.substr(start, length)];
-    }
-  },
+  string: runtime.string,
   table: {
     concat: function (tab, joiner) {
       if (!(tab && typeof tab === "object")) throw "table expected";
@@ -142,27 +110,25 @@ var _G = {
     },
     sort: function (tab, cmp) {
       cmp = cmp || lt;
-      console.log("BEFORE", tab);
       tab.sort(function (a, b) {
         return cmp(a, b)[0] ? 1 : -1;
       });
-      console.log("AFTER", tab);
       return [];
     }
   },
-  tonumber: function (val, base) {
+  tonumber: function tonumber(val, base) {
     return [runtime.tonumber(val, base)];
   },
-  tostring: function (val) {
+  tostring: function tostring(val) {
     return [runtime.tostring(val)];
   },
-  type: function (val) {
-    return [type(val)];
+  type: function type(val) {
+    return [runtime.type(val)];
   },
-  unpack: function (tab) {
+  unpack: function unpack(tab) {
     return tab;
   },
-  xpcall: function () { throw new Error("TODO: Implement xpcall"); }
+  xpcall: function xpcall() { throw new Error("TODO: Implement xpcall"); }
 };
 _G._G = _G;
 

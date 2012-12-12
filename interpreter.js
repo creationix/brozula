@@ -19,17 +19,24 @@ Function.prototype.toString = function () { return require('util').inspect(this)
 Closure.prototype.execute = function (env, args) {
   this.pc = 0; // Program Counter
   this.env = env; // global environment
+  this.vararg = Array.prototype.slice.call(args, this.numparams);
   this.slots = new Array(this.framesize); // vm registers
   for (var i = 0, l = this.numparams; i < l; i++) {
     this.slots[i] = args[i];
   }
-  while (true) {
-    var bc = this.bcins[this.pc++];
-//    console.log("  " + this.slots.join("\n  "));
-//    console.log(this.protoIndex + "-" + (this.pc-1), bc);
-    var ret = this[bc.op].apply(this, bc.args);
-    if (ret) return ret;
+  var ret;
+  try {
+    while (!ret) {
+      var bc = this.bcins[this.pc++];
+//      console.error(this.protoIndex + " " + this.slots.map(function (v, i) { return "  " + i + " " + require('util').inspect(v, false, -1, true);}, this).join("\n").trim());
+//      console.error(this.protoIndex + "-" + (this.pc-1), require('util').inspect(bc, false, 1, true).replace(/\s+/g, " "));
+      ret = this[bc.op].apply(this, bc.args);
+    }
   }
+  catch (err) {
+    throw new Error("Lua error at " + this.protoIndex + "-" + (this.pc-1) + "\n" + err);
+  }
+  return ret;
 };
 
 Closure.prototype.toFunction = function (env) {
@@ -156,7 +163,8 @@ Closure.prototype.USETN = function (a, d) {
 Closure.prototype.USETP = Closure.prototype.USETN;
 Closure.prototype.USETS = Closure.prototype.USETN;
 Closure.prototype.UCLO = function (a, d) {
-//  throw new Error("TODO: Implement UCLO");
+  if (a) throw new Error("TODO: Implement non-zero rbase for UCLO");
+  this.pc += d;
 };
 Closure.prototype.FNEW = function (a, d, mt) {
   var closure = new Closure(d, this);
@@ -236,10 +244,14 @@ Closure.prototype.CALL = function (a, b, c, mt) {
   this.call(a, b, this.slots[a], this.slots.slice(a + 1, a + c));
 };
 Closure.prototype.CALLMT = function (a, d, mt) {
+  var ret;
   if (d > 0) { // extras
-    return runtime[mt](this.slots[a], this.slots.slice(a + 1, a + d + 1).concat(this.multires));
+    ret = runtime[mt](this.slots[a], this.slots.slice(a + 1, a + d + 1).concat(this.multires));
   }
-  return runtime[mt](this.slots[a], this.multires);
+  else {
+    ret = runtime[mt](this.slots[a], this.multires);
+  }
+  return ret;
 };
 Closure.prototype.CALLT = function (a, d, mt) {
   return runtime[mt](this.slots[a], this.slots.slice(a + 1, a + d));
@@ -257,7 +269,14 @@ Closure.prototype.ITERN = function (a, b, c, mt) {
   this.call(a, b, this.env.next, [this.slots[a - 2], this.slots[a - 1]]);
 };
 Closure.prototype.VARG = function (a, b, c) {
-  throw new Error("TODO: Implement VARG");
+  if (b === 0) {
+    this.multires = this.vararg;
+  }
+  else {
+    for (var i = 0; i < b - 1; i++) {
+      this.slots[a + i] = this.args[i];
+    }
+  }
 };
 Closure.prototype.ISNEXT = function (a, d) {
   if (this.slots[a - 3] === this.env.next && runtime.type(this.slots[a - 2]) === "table" && this.slots[a - 1] === null) {
