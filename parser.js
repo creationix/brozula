@@ -247,7 +247,6 @@ function parse(buffer) {
     readproto(protoBuffers[i], protos, i);
   }
 
-//  console.log(require('util').inspect(protos, false, 5, true));
   return protos;
 
 }
@@ -282,10 +281,15 @@ function readproto(buffer, protos, protoIndex) {
     bcins[i] = parser.W();
   }
   for (i = 0; i < numuv; i++) {
-    uvdata[i] = parser.H();
+    var uv = parser.H();
+    uvdata[i] = {
+      local: !!(uv & 0x8000),
+      immutable: !!(uv & 0x4000),
+      uv: uv & 0x3fff
+    };
   }
   var constants = new Array(numkgc + numkn);
-  var childc = protoIndex + 1;
+  var childc = protoIndex;
   for (i = 0; i < numkgc; i++) {
     var kgctype = parser.U();
     var type = kgctypes[kgctype] || "STR";

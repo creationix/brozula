@@ -25,9 +25,20 @@ Closure.prototype.execute = function (env, args) {
   }
   while (true) {
     var bc = this.bcins[this.pc++];
+//    console.log("  " + this.slots.join("\n  "));
+//    console.log(this.protoIndex + "-" + (this.pc-1), bc);
     var ret = this[bc.op].apply(this, bc.args);
     if (ret) return ret;
   }
+};
+
+Closure.prototype.toFunction = function (env) {
+  var self = this;
+  var fn = function () {
+    return self.execute.call(self, env, arguments);
+  };
+  fn.index = this.protoIndex;
+  return fn;
 };
 
 Closure.prototype.ISLT = function (a, d, mt) {
@@ -117,24 +128,39 @@ Closure.prototype.KNIL = function (a, d) {
     this.slots[i] = null;
   }
 };
+
+Closure.prototype.getUv = function (index) {
+  var uv = this.uvdata[index];
+//  console.log("getUv", this.protoIndex, index, uv);
+  if (!uv.local) return this.parent.getUv(index);
+  return this.parent.slots[uv.uv];
+};
+
+Closure.prototype.setUv = function (index, value) {
+  var uv = this.uvdata[index];
+//  console.log("setUv", this.protoIndex, index, uv, value);
+  if (!uv.local) return this.parent.setUv(index, value);
+  if (uv.immutable) throw new Error("Cannot set immutable upvalue");
+  this.parent.slots[uv.uv] = value;
+};
+
 Closure.prototype.UGET = function (a, d) {
-  throw new Error("TODO: Implement UGET");
+  this.slots[a] = this.getUv(d);
 };
 Closure.prototype.USETV = function (a, d) {
-  throw new Error("TODO: Implement USETV");
+  this.setUv(a, this.slots[d]);
 };
 Closure.prototype.USETN = function (a, d) {
-  throw new Error("TODO: Implement USETN");
+  this.setUv(a, d);
 };
-Closure.prototype.USETP = function (a, d) {
-  throw new Error("TODO: Implement USETP");
-};
+Closure.prototype.USETP = Closure.prototype.USETN;
+Closure.prototype.USETS = Closure.prototype.USETN;
 Closure.prototype.UCLO = function (a, d) {
-  throw new Error("TODO: Implement USETP");
+//  throw new Error("TODO: Implement UCLO");
 };
 Closure.prototype.FNEW = function (a, d, mt) {
-  // TODO: call mt when collected
-  throw new Error("TODO: Implement USETP");
+  var closure = new Closure(d, this);
+  this.slots[a] = closure.toFunction(this.env);
 };
 Closure.prototype.TNEW = function (a, d, mt) {
   // TODO: call mt when collected
