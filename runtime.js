@@ -373,7 +373,7 @@ function tostring(val) {
   var t = type(val);
   if (t === "table") return "table: " + getpointer(val);
   if (t === "function") return "function: " + getpointer(val);
-  if (t === null || t === undefined) return "nil";
+  if (t === "nil") return "nil";
   return "" + val;
 }
 
