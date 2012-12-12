@@ -188,7 +188,7 @@ else {
       console.log(require('util').inspect(protos, false, 3 + (options.beautify ? 2 : 0), true) + "\n");
     }
     if (options.execute) {
-      (new Closure(protos[protos.length - 1])).execute(globals);
+      (new Closure(protos[protos.length - 1])).toFunction(globals)();
     }
 //    program = "(function () {\n\n" + program + "\n\n}());";
 //    if (options.uglify) {
