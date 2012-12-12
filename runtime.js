@@ -6,17 +6,32 @@
 
 // Metatmethods
 function lt(op1, op2) {
-
-  // TODO: check metamethods
-  return op1 < op2;
+  var t1 = type(op1), t2 = type(op2);
+  if (t1 === t2) {
+    if (t1 === "number" || t1 === "string") return op1 < op2;
+    var h = getcomphandler(op1, op2, "__lt");
+    if (h) return h(op1, op2);
+  }
+  throw "attempt to compare " + t1 + " with " + t2;
 }
 function le(op1, op2) {
-  // TODO: check metamethods
-  return op1 <= op2;
+  var t1 = type(op1), t2 = type(op2);
+  if (t1 === t2) {
+    if (t1 === "number" || t1 === "string") return op1 <= op2;
+    var h = getcomphandler(op1, op2, "__le");
+    if (h) return h(op1, op2);
+    h = getcomphandler(op1, op2, "__lt");
+    if (h) return !h(op2, op1);
+  }
+  throw "attempt to compare " + t1 + " with " + t2;
 }
 function eq(op1, op2) {
-  // TODO: check metamethods
-  return op1 === op2;
+  var t1 = type(op1), t2 = type(op2);
+  if (op1 === op2) return true;
+  if (t1 !== t2) return false;
+  var h = getcomphandler(op1, op2, "__eq");
+  if (h) return h(op1, op2);
+  return false;
 }
 function unm(op) {
   var o = tonumber(op);
@@ -25,12 +40,20 @@ function unm(op) {
   if (h) return h(op);
   throw "attempt to perform arithmetic on a " + type(op) + " value";
 }
-function len(val) {
-  // TODO: check metamethods
-  if (Array.isArray(val)) return val.length;
-  if (typeof val === "string") return val.length;
-  if (typeof val === "object") return 0;
-  throw new Error("attempt to get length of " + type(val) + " value");
+function len(op) {
+  var t = type(op);
+  if (t === "string") {
+    return op.length;
+  }
+  if (t === "table") {
+    if (Array.isArray(op)) return op.length;
+    return 0;
+  }
+  var h = getmetamethod(op, "__len");
+  if (h) {
+    return h(op);
+  }
+  throw new Error("attempt to get length of " + t + " value");
 }
 
 function add(op1, op2) {
@@ -177,10 +200,13 @@ function rawset(tab, key, val) {
 }
 
 function setmetatable(tab, meta) {
+  var t = type(tab);
+  if (t !== "table") throw "table expected, got " + t;
   tab.__meta__ = meta;
 }
 
 function getmetatable(tab) {
+  if (type(tab) !== "table") return null;
   return tab.__meta__ || null;
 }
 
@@ -202,6 +228,13 @@ function tonumber(val, base) {
 function getmetamethod(tab, event) {
   var meta = getmetatable(tab);
   if (meta && meta[event] !== undefined) return meta[event];
+  return null;
+}
+
+function getcomphandler(op1, op2, event) {
+  var mm1 = getmetamethod(op1, event);
+  var mm2 = getmetamethod(op2, event);
+  if (mm1 === mm2) return mm1;
   return null;
 }
 

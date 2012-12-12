@@ -88,7 +88,7 @@ var _G = {
     runtime.rawset(tab, key, val);
     return [];
   },
-  require: function () { throw new Error("TODO: Implement rawset"); },
+  require: function () { throw new Error("TODO: Implement require"); },
   select: function () { throw new Error("TODO: Implement select"); },
   setfenv: function () { throw new Error("TODO: Implement setfenv"); },
   setmetatable: function (tab, meta) {
