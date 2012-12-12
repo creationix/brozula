@@ -354,7 +354,7 @@ function readproto(buffer, protos, protoIndex) {
 
 function readknum(parser) {
   var isnum = parser.buffer[parser.index] & 1;
-  var lo = parser.U() >>> 1;
+  var lo = parser.U() >> 1;
   if (isnum) {
     var buf = new Buffer(8);
     buf.writeUInt32LE(lo >>> 0, 0);
