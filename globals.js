@@ -58,7 +58,9 @@ var _G = {
   },
   gcinfo: function () { throw new Error("TODO: Implement gcinfo"); },
   getfenv: function () { throw new Error("TODO: Implement getfenv"); },
-  getmetatable: function () { throw new Error("TODO: Implement getmetatable"); },
+  getmetatable: function (tab) {
+    return [runtime.getmetatable(tab)];
+  },
   io: {},
   ipairs: function (tab) {
     return [inext, tab, 0];
@@ -79,12 +81,20 @@ var _G = {
     return [];
   },
   rawequal: function () { throw new Error("TODO: Implement rawequal"); },
-  rawget: function () { throw new Error("TODO: Implement rawget"); },
-  rawset: function () { throw new Error("TODO: Implement rawset"); },
+  rawget: function (tab, key) {
+    return [runtime.rawget(tab, key)];
+  },
+  rawset: function (tab, key, val) {
+    runtime.rawset(tab, key, val);
+    return [];
+  },
   require: function () { throw new Error("TODO: Implement rawset"); },
   select: function () { throw new Error("TODO: Implement select"); },
   setfenv: function () { throw new Error("TODO: Implement setfenv"); },
-  setmetatable: function () { throw new Error("TODO: Implement setmetatable"); },
+  setmetatable: function (tab, meta) {
+    runtime.setmetatable(tab, meta);
+    return [tab];
+  },
   string: {
     match: function (s, pattern, init) {
       if (init) throw new Error("TODO: Implement match init offset");

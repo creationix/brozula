@@ -59,18 +59,55 @@ function concat(op1, op2) {
 function gc(tab) {
   // TODO: check metamethods
 }
-function index(tab, key) {
-  // TODO: check metamethods
-  if (tab.hasOwnProperty(key)) return tab[key];
-  return null;
+function index(table, key) {
+  var t, h, meta;
+  t = type(table);
+  if (t === "table") {
+    if (table.hasOwnProperty(key)) return rawget(table, key);
+    meta = getmetatable(table);
+    if (meta && meta.hasOwnProperty("__index")) h = meta.__index;
+    else return null;
+  }
+  else {
+    meta = getmetatable(table);
+    if (meta && meta.hasOwnProperty("__index")) h = meta.__index;
+    else throw "attempt to index a " + t + " value";
+  }
+  if (typeof h === "function") {
+    return h(table, key);
+  }
+  return index(h, key);
 }
-function newindex(tab, key, val) {
-  // TODO: check metamethods
-  tab[key] = val;
+function newindex(table, key, val) {
+  var t, h, meta;
+  t = type(table);
+  if (t === "table") {
+    if (table.hasOwnProperty(key)) { rawset(table, key, val); return; }
+    meta = getmetatable(table);
+    if (meta && meta.hasOwnProperty("__newindex")) h = meta.__newindex;
+    else { rawset(table, key, val); return; }
+  }
+  else {
+    meta = getmetatable(table);
+    if (meta && meta.hasOwnProperty("__newindex")) h = meta.__newindex;
+    else throw "attempt to index a " + t + " value";
+  }
+  if (typeof h === "function") {
+    h(table, key, val);
+  }
+  else {
+    newindex(h, key, val);
+  }
 }
-function call(tab, args) {
-  // TODO: check metamethods
-  return tab.apply(null, args);
+function call(func, args) {
+  if (typeof func === "function") {
+    return func.apply(null, args);
+  }
+  var meta = getmetatable(func);
+  if (meta && meta.hasOwnProperty("__call")) {
+    return meta.__call.apply(null, [func].concat(args));
+  }
+  throw "attempt to call a " + type(func) + " value";
 }
 
 // Helpers
@@ -83,10 +120,50 @@ function type(val) {
   return typeof val;
 }
 
+function rawget(tab, key) {
+  if (Array.isArray(tab) && typeof key === "number") {
+    key--;
+    if (tab.hasOwnProperty(key)) {
+      return tab[key];
+    }
+    return null;
+  }
+  if (typeof key === "string") {
+    if (tab.hasOwnProperty(key)) {
+      return tab[key];
+    }
+    return null;
+  }
+  throw new Error("TODO: Implement fancy table get");
+}
+
+function rawset(tab, key, val) {
+  if (Array.isArray(tab) && typeof key === "number") {
+    key--;
+    tab[key] = val;
+    return;
+  }
+  if (typeof key === "string") {
+    tab[key] = val;
+    return;
+  }
+  throw new Error("TODO: Implement fancy table set");
+}
+
+function setmetatable(tab, meta) {
+  tab.__meta__ = meta;
+}
+
+function getmetatable(tab) {
+  return tab.__meta__ || null;
+}
+
 return {
   lt: lt, le: le, eq: eq, unm: unm, len: len, add: add, sub: sub, mul: mul,
   div: div, mod: mod, pow: pow, concat: concat, gc: gc, index: index,
-  newindex: newindex, call: call, falsy: falsy, type: type
+  newindex: newindex, call: call, falsy: falsy, type: type,
+  setmetatable: setmetatable, getmetatable: getmetatable, rawget: rawget,
+  rawset: rawset
 };
 
 });
