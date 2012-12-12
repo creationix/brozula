@@ -31,7 +31,7 @@ function next(tab, key) {
 function inext(tab, key) {
   var newKey;
   if (Array.isArray(tab) && tab.length && typeof key === "number" &&
-      tab.hasOwnProperty(newKey = key + 1)) {
+      tab[newKey = key + 1] !== undefined) {
     return [newKey, tab[newKey]];
   }
   return [];
@@ -150,8 +150,12 @@ var _G = {
       return [];
     }
   },
-  tonumber: function () { throw new Error("TODO: Implement tonumber"); },
-  tostring: function () { throw new Error("TODO: Implement tostring"); },
+  tonumber: function (val, base) {
+    return [runtime.tonumber(val, base)];
+  },
+  tostring: function (val) {
+    return [runtime.tostring(val)];
+  },
   type: function (val) {
     return [type(val)];
   },
