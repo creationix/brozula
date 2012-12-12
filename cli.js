@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 var parse = require('./parser');
-var interpret = require('./interpreter');
-var runtime = require('./runtime');
+var Closure = require('./interpreter').Closure;
+var globals = require('./globals');
 var nopt = require("nopt");
 var execFile = require("child_process").execFile;
 var readFile = require('fs').readFile;
@@ -106,6 +106,9 @@ if (options.serve) {
     if (url.pathname === "/runtime.js") {
       return send(req, pathJoin(__dirname, "/runtime.js")).pipe(res);
     }
+    if (url.pathname === "/globals.js") {
+      return send(req, pathJoin(__dirname, "/globals.js")).pipe(res);
+    }
     if (url.pathname === "/browser-buffer.js") {
       return send(req, pathJoin(__dirname, "/browser-buffer.js")).pipe(res);
     }
@@ -181,8 +184,8 @@ else {
   filename = pathResolve(process.cwd(), filename);
   compile(filename, function (err, protos) {
     if (err) throw err;
-    var program = interpret(protos, protos.length - 1, runtime);
-    program();
+    var program = new Closure(protos[protos.length - 1]);
+    program.execute(globals);
 //    program = "(function () {\n\n" + program + "\n\n}());";
 //    if (options.uglify) {
 //      var UglifyJS = require("uglify-js");

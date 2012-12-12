@@ -230,24 +230,29 @@ function parse(buffer) {
   if (flags & 4) throw new Error("FFI bytecode not supported");
 
   // proto+
-  var protos = [];
+  var protoBuffers = [];
   do {
     var len = parser.U();
-    var protoBuffer = buffer.slice(parser.index, parser.index + len);
-    protos.push(readproto(protoBuffer, protos.length - 1));
+    protoBuffers.push(buffer.slice(parser.index, parser.index + len));
     parser.index += len;
   } while (buffer[parser.index]);
 
   // 0U and EOF
   if (parser.U() !== 0) throw new Error("Missing 0U at end of file");
-  if (parser.index < buffer.length) throw new Error((length - parser.index) + " bytes leftover");
+  if (parser.index < buffer.length) throw new Error((buffer.length - parser.index) + " bytes leftover");
 
-//  console.log(require('util').inspect(protos, false, 3, true));
+  var l = protoBuffers.length;
+  var protos = new Array(l);
+  for (var i = 0; i < l; i++) {
+    readproto(protoBuffers[i], protos, i);
+  }
+
+//  console.log(require('util').inspect(protos, false, 5, true));
   return protos;
 
 }
 
-function readproto(buffer, protoIndex) {
+function readproto(buffer, protos, protoIndex) {
   var parser = new Parser(buffer);
 
   // flagsB numparamsB framesizeB numuvB numkgcU numknU numbcU [debuglenU [firstlineU numlineU]]
@@ -259,29 +264,44 @@ function readproto(buffer, protoIndex) {
   var numkn = parser.U();
   var numbc = parser.U();
 
-  // bcinsW* uvdataH* kgc* knum*
   var bcins = new Array(numbc);
-  for (var i = 0; i < numbc; i++) {
+  var uvdata = new Array(numuv);
+
+  var proto = protos[protoIndex] = {
+    index: protoIndex,
+    flags: flags,
+    numparams: numparams,
+    framesize: framesize,
+    bcins: bcins,
+    uvdata: uvdata
+  };
+
+  // bcinsW* uvdataH* kgc* knum*
+  var i;
+  for (i = 0; i < numbc; i++) {
     bcins[i] = parser.W();
   }
-  var uvdata = new Array(numuv);
-  for (var i = 0; i < numuv; i++) {
+  for (i = 0; i < numuv; i++) {
     uvdata[i] = parser.H();
   }
   var constants = new Array(numkgc + numkn);
   var childc = protoIndex + 1;
-  for (var i = 0; i < numkgc; i++) {
+  for (i = 0; i < numkgc; i++) {
     var kgctype = parser.U();
     var type = kgctypes[kgctype] || "STR";
     if (type === "CHILD") {
-      constants[i + numkn] = --childc;
+      constants[i + numkn] = protos[--childc];
     }
     else {
       constants[i + numkn] = kgcdecs[type](parser, kgctype);
     }
   }
-  for (var i = 0; i < numkn; i++) {
+  for (i = 0; i < numkn; i++) {
     constants[i] = readknum(parser);
+  }
+
+  for (i = 0; i < numbc; i++) {
+    bcins[i] = parseOpcode(bcins[i], i);
   }
 
   // Make sure we consumed all the bytes properly
@@ -295,7 +315,6 @@ function readproto(buffer, protoIndex) {
       case "num": return constants[val];
       case "str": case "tab": case "func": case "cdata":
         return constants[constants.length - val - 1];
-      case "uv": return uvdata[val];
       case "jump": return val - 0x8000;
       default: return val;
     }
@@ -304,30 +323,29 @@ function readproto(buffer, protoIndex) {
   function parseOpcode(word, i) {
     var opcode = opcodes[word & 0xff];
     var def = bcdef[opcode];
+    var args = [];
     var op = {
-      op: opcode
+      op: opcode,
+      args: args
     };
     if (def.ma) {
-      op.a =parseArg(def.ma, (word >>> 8) & 0xff, i);
+      args.push(parseArg(def.ma, (word >>> 8) & 0xff, i));
     }
     if (def.mb) {
-      op.b = parseArg(def.mb, word >>> 24, i);
+      args.push(parseArg(def.mb, word >>> 24, i));
     }
     if (def.mc) {
-      op.c = parseArg(def.mc, (word >>> 16) & 0xff, i);
+      args.push(parseArg(def.mc, (word >>> 16) & 0xff, i));
     }
     if (def.md) {
-      op.d = parseArg(def.md, word >>> 16, i);
+      args.push(parseArg(def.md, word >>> 16, i));
+    }
+    if (def.mt) {
+      args.push(def.mt);
     }
     return op;
   }
 
-  return {
-    flags: flags,
-    numparams: numparams,
-    framesize: framesize,
-    bcins: bcins.map(parseOpcode)
-  };
 }
 
 function readknum(parser) {
