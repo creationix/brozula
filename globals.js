@@ -9,6 +9,16 @@ var slice = Array.prototype.slice;
 var next = runtime.next;
 var inext = runtime.inext;
 
+var file = {
+  close: function () { throw new Error("TODO: Implement io.file.close"); },
+  flush: function () { throw new Error("TODO: Implement io.file.flush"); },
+  lines: function () { throw new Error("TODO: Implement io.file.lines"); },
+  read: function () { throw new Error("TODO: Implement io.file.read"); },
+  seek: function () { throw new Error("TODO: Implement io.file.seek"); },
+  setvbuf: function () { throw new Error("TODO: Implement io.file.setvbuf"); },
+  write: function () { throw new Error("TODO: Implement io.file.write"); }
+};
+
 var _G = {
   _VERSION: "Lua 5.1",
   assert: function assert(expr, message) {
@@ -27,7 +37,22 @@ var _G = {
   getmetatable: function getmetatable(tab) {
     return [runtime.getmetatable(tab)];
   },
-  io: {},
+  io: {
+    input: function () { throw new Error("TODO: Implement io.input"); },
+    tmpfile: function () { throw new Error("TODO: Implement io.tmpfile"); },
+    read: function () { throw new Error("TODO: Implement io.read"); },
+    output: function () { throw new Error("TODO: Implement io.output"); },
+    open: function () { throw new Error("TODO: Implement io.open"); },
+    close: function () { throw new Error("TODO: Implement io.close"); },
+    write: function () { throw new Error("TODO: Implement io.write"); },
+    popen: function () { throw new Error("TODO: Implement io.popen"); },
+    flush: function () { throw new Error("TODO: Implement io.flush"); },
+    type: function () { throw new Error("TODO: Implement io.type"); },
+    lines: function () { throw new Error("TODO: Implement io.lines"); },
+    stdin: file,
+    stdout: file,
+    stderr: file
+  },
   ipairs: function ipairs(tab) {
     return [inext, tab, 0];
   },

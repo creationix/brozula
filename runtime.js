@@ -416,7 +416,8 @@ function type(val) {
 
 function rawget(tab, key) {
   if (tab instanceof Table) return tab.get(key);
-  return tab[key];
+  var v = tab[key];
+  return v === undefined ? null : v;
 }
 
 function haskey(tab, key) {
