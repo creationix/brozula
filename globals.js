@@ -27,7 +27,14 @@ var _G = {
   },
   bit: {},
   collectgarbage: function collectgarbage() { throw new Error("TODO: Implement collectgarbage"); },
-  coroutine: {},
+  coroutine: {
+    create: function () { throw new Error("TODO: Implement coroutine.create"); },
+    resume: function () { throw new Error("TODO: Implement coroutine.resume"); },
+    running: function () { throw new Error("TODO: Implement coroutine.running"); },
+    status: function () { throw new Error("TODO: Implement coroutine.status"); },
+    wrap: function () { throw new Error("TODO: Implement coroutine.wrap"); },
+    yield: function () { throw new Error("TODO: Implement coroutine.yield"); }
+  },
   debug: {},
   error: function error(message) {
     throw message;
