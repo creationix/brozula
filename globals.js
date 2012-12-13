@@ -6,35 +6,8 @@
 
 var falsy = runtime.falsy;
 var slice = Array.prototype.slice;
-
-function next(tab, key) {
-  var isNull = key === undefined || key === null;
-  if (Array.isArray(tab)) {
-    if (isNull) key = 0;
-    return inext(tab, key);
-  }
-  var keys = Object.keys(tab);
-  var newKey;
-  if (isNull) {
-    newKey = keys[0];
-    return [newKey, tab[newKey]];
-  }
-  var index = keys.indexOf(key) + 1;
-  if (index) {
-    newKey = keys[index];
-    return [newKey, tab[newKey]];
-  }
-  return [];
-}
-
-function inext(tab, key) {
-  var newKey;
-  if (Array.isArray(tab) && tab.length && typeof key === "number" &&
-      tab[newKey = key + 1] !== undefined) {
-    return [newKey, tab[newKey]];
-  }
-  return [];
-}
+var next = runtime.next;
+var inext = runtime.inext;
 
 var _G = {
   _VERSION: "Lua 5.1",
@@ -128,7 +101,11 @@ var _G = {
   unpack: function unpack(tab) {
     return tab;
   },
-  xpcall: function xpcall() { throw new Error("TODO: Implement xpcall"); }
+  xpcall: function xpcall() { throw new Error("TODO: Implement xpcall"); },
+  inspect: function (val) {
+    console.log(require('util').inspect(val, false, 10, true));
+    return [];
+  }
 };
 _G._G = _G;
 

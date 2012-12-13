@@ -25,17 +25,17 @@ Closure.prototype.execute = function (env, args) {
     this.slots[i] = args[i];
   }
   var ret;
-  try {
+//  try {
     while (!ret) {
       var bc = this.bcins[this.pc++];
 //      console.error(this.protoIndex + " " + this.slots.map(function (v, i) { return "  " + i + " " + require('util').inspect(v, false, -1, true);}, this).join("\n").trim());
 //      console.error(this.protoIndex + "-" + (this.pc-1), require('util').inspect(bc, false, 1, true).replace(/\s+/g, " "));
       ret = this[bc.op].apply(this, bc.args);
     }
-  }
-  catch (err) {
-    throw new Error("Lua error at " + this.protoIndex + "-" + (this.pc-1) + "\n" + err);
-  }
+//  }
+//  catch (err) {
+//    throw new Error("Lua error at " + this.protoIndex + "-" + (this.pc-1) + "\n" + err);
+//  }
   return ret;
 };
 
@@ -172,23 +172,11 @@ Closure.prototype.FNEW = function (a, d, mt) {
 };
 Closure.prototype.TNEW = function (a, d, mt) {
   // TODO: call mt when collected
-  var narr = d & 0x7ff;
-  var nhash = d >>> 11;
-  this.slots[a] = (!narr || nhash) ? {} : new Array(narr);
+  this.slots[a] = new runtime.Table(d & 0x7ff, d >>> 11);
 };
 Closure.prototype.TDUP = function (a, d, mt) {
   // TODO: call mt when collected
-  if (Array.isArray(d)) {
-    this.slots[a] = d.slice(0);
-    return;
-  }
-  var keys = Object.keys(d);
-  var dup = {};
-  for (var i = 0, l = keys.length; i < l; i++) {
-    var key = keys[i];
-    dup[key] = d[key];
-  }
-  this.slots[a] = dup;
+  this.slots[a] = runtime.Table.clone(d);
 };
 Closure.prototype.GGET = function (a, d, mt) {
   this.slots[a] = runtime[mt](this.env, d);
@@ -319,7 +307,7 @@ Closure.prototype.FORL = function (a, d) {
   }
 };
 Closure.prototype.ITERL = function (a, d) {
-  if (!runtime.falsy(this.slots[a])) {
+  if (!(this.slots[a] === null || this.slots[a] === undefined)) {
     this.slots[a - 1] = this.slots[a];
     this.pc += d;
   }
