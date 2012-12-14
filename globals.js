@@ -64,7 +64,73 @@ var _G = {
     return [inext, tab, 0];
   },
   jit: {},
-  math: {},
+  math: {
+    abs:   function (x) { return [Math.abs(x)]; },
+    acos:  function (x) { return [Math.acos(x)]; },
+    asin:  function (x) { return [Math.asin(x)]; },
+    atan:  function (x) { return [Math.atan(x)]; },
+    atan2: function (x,y) { return [Math.atan2(x,y)]; },
+    ceil:  function (x) { return [Math.ceil(x)]; },
+    cos:   function (x) { return [Math.cos(x)]; },
+    cosh:  function (x) { return [ ( Math.exp(x)+Math.exp(-x) ) / 2.0 ]; },
+    deg:   function (x) { return [x/(Math.PI/180)]; },
+    exp:   function (x) { return [Math.exp(x)]; },
+    floor: function (x) { return [Math.floor(x)]; },
+    fmod:  function () { throw new Error("TODO: Implement math.fmod"); },
+    frexp: function () { throw new Error("TODO: Implement math.frexp"); },
+    huge:  Infinity,
+    ldexp: function () { throw new Error("TODO: Implement math.ldexp"); },
+    log:   function (x,b) {
+      return [ (typeof b === 'undefined' ) ?
+        Math.log(x) :
+        Math.log(x) / Math.log(x)
+      ];
+    },
+    log10: function (x) { // This is deprecated in Lua 5.2
+      return [ Math.log ( x ) / Math.LN10 ];
+    },
+    max: function (max) {
+      for ( var i = 1; i < arguments.length; i++ ) {
+        max = Math.max ( max , arguments[i] );
+      }
+      return [max];
+    },
+    min: function (min) {
+      for ( var i = 1; i < arguments.length; i++ ) {
+        min = Math.min ( min , arguments[i] );
+      }
+      return [min];
+    },
+    modf: function () { throw new Error("TODO: Implement math.modf"); },
+    pi: Math.PI,
+    pow: function (x) { return [Math.pow(x)]; },
+    rad: function (x) { return [x*(Math.PI/180)]; },
+    random: function (a,b) {
+      var r = Math.random(x);
+      switch ( arguments.length ) {
+        case 0:
+          return [rnd];
+        case 1: /* only upper limit */
+          if (1>a) { throw new Error("interval is empty"); }
+          return [Math.floor(r*a)+1];
+        case 2: /* lowe and upper limits */
+          if (a>b) { throw new Error("interval is empty"); }
+          return [Math.floor(r*(b-a+1))+1];
+        default:
+          throw new Error("wrong number of arguments");
+      }
+    },
+    randomseed: function () { throw new Error("TODO: Implement math.randomseed"); },
+    sin:  function (x) { return [Math.sin(x)]; },
+    sinh: function (x) { return [ ( Math.exp(x)-Math.exp(-x) ) / 2.0 ]; },
+    sqrt: function (x) { return [Math.sqrt(x)]; },
+    tan:  function (x) { return [Math.tan(x)]; },
+    tanh: function (x) {
+      var ex = Math.exp(x);
+      var ey = Math.exp(-x);
+      return [ ( ex-ey ) / ( ex + ey ) ];
+    }
+  },
   module: function module() { throw new Error("TODO: Implement module"); },
   newproxy: function newproxy() { throw new Error("TODO: Implement newproxy"); },
   next: next,
