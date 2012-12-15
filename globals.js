@@ -65,36 +65,71 @@ var _G = {
   },
   jit: {},
   math: {
-    abs: function () { throw new Error("TODO: Implement math.abs"); },
-    acos: function () { throw new Error("TODO: Implement math.acos"); },
-    asin: function () { throw new Error("TODO: Implement math.asin"); },
-    atan: function () { throw new Error("TODO: Implement math.atan"); },
-    atan2: function () { throw new Error("TODO: Implement math.atan2"); },
-    ceil: function () { throw new Error("TODO: Implement math.ceil"); },
-    cos: function () { throw new Error("TODO: Implement math.cos"); },
-    cosh: function () { throw new Error("TODO: Implement math.cosh"); },
-    deg: function () { throw new Error("TODO: Implement math.deg"); },
-    exp: function () { throw new Error("TODO: Implement math.exp"); },
-    floor: function () { throw new Error("TODO: Implement math.floor"); },
-    fmod: function () { throw new Error("TODO: Implement math.fmod"); },
+    abs:   function (x) { return [Math.abs(x)]; },
+    acos:  function (x) { return [Math.acos(x)]; },
+    asin:  function (x) { return [Math.asin(x)]; },
+    atan:  function (x) { return [Math.atan(x)]; },
+    atan2: function (x,y) { return [Math.atan2(x,y)]; },
+    ceil:  function (x) { return [Math.ceil(x)]; },
+    cos:   function (x) { return [Math.cos(x)]; },
+    cosh:  function (x) { return [ ( Math.exp(x)+Math.exp(-x) ) / 2.0 ]; },
+    deg:   function (x) { return [x/(Math.PI/180)]; },
+    exp:   function (x) { return [Math.exp(x)]; },
+    floor: function (x) { return [Math.floor(x)]; },
+    fmod:  function () { throw new Error("TODO: Implement math.fmod"); },
     frexp: function () { throw new Error("TODO: Implement math.frexp"); },
-    huge: function () { throw new Error("TODO: Implement math.huge"); },
+    huge:  Infinity,
     ldexp: function () { throw new Error("TODO: Implement math.ldexp"); },
-    log: function () { throw new Error("TODO: Implement math.log"); },
-    log10: function () { throw new Error("TODO: Implement math.log10"); },
-    max: function () { throw new Error("TODO: Implement math.max"); },
-    min: function () { throw new Error("TODO: Implement math.min"); },
+    log:   function (x,b) {
+      return [ (typeof b === 'undefined' ) ?
+        Math.log(x) :
+        Math.log(x) / Math.log(x)
+      ];
+    },
+    log10: function (x) { // This is deprecated in Lua 5.2
+      return [ Math.log ( x ) / Math.LN10 ];
+    },
+    max: function (max) {
+      for ( var i = 1; i < arguments.length; i++ ) {
+        max = Math.max ( max , arguments[i] );
+      }
+      return [max];
+    },
+    min: function (min) {
+      for ( var i = 1; i < arguments.length; i++ ) {
+        min = Math.min ( min , arguments[i] );
+      }
+      return [min];
+    },
     modf: function () { throw new Error("TODO: Implement math.modf"); },
-    pi: function () { throw new Error("TODO: Implement math.pi"); },
-    pow: function () { throw new Error("TODO: Implement math.pow"); },
-    rad: function () { throw new Error("TODO: Implement math.rad"); },
-    random: function () { throw new Error("TODO: Implement math.random"); },
+    pi: Math.PI,
+    pow: function (x) { return [Math.pow(x)]; },
+    rad: function (x) { return [x*(Math.PI/180)]; },
+    random: function (a,b) {
+      var r = Math.random(x);
+      switch ( arguments.length ) {
+        case 0:
+          return [rnd];
+        case 1: /* only upper limit */
+          if (1>a) { throw new Error("interval is empty"); }
+          return [Math.floor(r*a)+1];
+        case 2: /* lowe and upper limits */
+          if (a>b) { throw new Error("interval is empty"); }
+          return [Math.floor(r*(b-a+1))+1];
+        default:
+          throw new Error("wrong number of arguments");
+      }
+    },
     randomseed: function () { throw new Error("TODO: Implement math.randomseed"); },
-    sin: function () { throw new Error("TODO: Implement math.sin"); },
-    sinh: function () { throw new Error("TODO: Implement math.sinh"); },
-    sqrt: function () { throw new Error("TODO: Implement math.sqrt"); },
-    tan: function () { throw new Error("TODO: Implement math.tan"); },
-    tanh: function () { throw new Error("TODO: Implement math.tanh"); }
+    sin:  function (x) { return [Math.sin(x)]; },
+    sinh: function (x) { return [ ( Math.exp(x)-Math.exp(-x) ) / 2.0 ]; },
+    sqrt: function (x) { return [Math.sqrt(x)]; },
+    tan:  function (x) { return [Math.tan(x)]; },
+    tanh: function (x) {
+      var ex = Math.exp(x);
+      var ey = Math.exp(-x);
+      return [ ( ex-ey ) / ( ex + ey ) ];
+    }
   },
   module: function module() { throw new Error("TODO: Implement module"); },
   newproxy: function newproxy() { throw new Error("TODO: Implement newproxy"); },
