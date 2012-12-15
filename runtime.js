@@ -5,7 +5,7 @@
 )(function () {
 
 function Table() {
-  this.array = [];
+  this.array = [null];
   this.keys = [];
   this.values = [];
   this.hash = {};
