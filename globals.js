@@ -176,10 +176,17 @@ var _G = {
       }
       return [slice.join(joiner)];
     },
-    insert: function (tab, value) {
+    insert: function (tab) {
       if (!(tab && typeof tab === "object")) throw "table expected";
-      if (!Array.isArray(tab)) throw "TODO: Implement insert on non-array tables";
-      tab.push(value);
+      var pos, val;
+      if (arguments.length <= 2) {
+        pos = tab.array.length+1;
+        val = arguments[1];
+      } else {
+        pos = arguments[1];
+        val = arguments[2];
+      }
+      tab.array.splice( pos, 0, val );
       return [];
     },
     sort: function (tab, cmp) {
