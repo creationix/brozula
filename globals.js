@@ -195,6 +195,13 @@ var _G = {
         return cmp(a, b)[0] ? 1 : -1;
       });
       return [];
+    },
+    remove: function (tab,pos) {
+      if (!(tab && typeof tab === "object")) throw "table expected";
+      if (arguments.length == 1) {
+        pos = 1;
+      }
+      return tab.array.splice( pos, 1 );
     }
   },
   tonumber: function tonumber(val, base) {
