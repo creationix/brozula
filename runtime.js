@@ -141,8 +141,14 @@ function patternToRegExp(pattern, flags) {
 }
 
 var string = {
-  byte: function () {
-    throw new Error("TODO: implement string.byte");
+  byte: function (s,a,b) {
+    a = Math.max( ((typeof a == "undefined")? 1 : a) , 1)-1;
+    b = Math.min( ((typeof b == "undefined")? 1 : b) , s.length)-1;
+    var bytes = [];
+    for ( var i=a ; i <= b ; i++ ) {
+      bytes.push ( s.charCodeAt ( i ) );
+    }
+    return bytes;
   },
   char: function () {
     throw new Error("TODO: implement string.char");
