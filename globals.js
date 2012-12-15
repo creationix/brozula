@@ -168,9 +168,12 @@ var _G = {
   },
   string: runtime.string,
   table: {
-    concat: function (tab, joiner) {
+    concat: function (tab, joiner, i , j) {
       if (!(tab && typeof tab === "object")) throw "table expected";
       if (!Array.isArray(tab)) return [""];
+      if (arguments.length >= 3 ) {
+        tab = tab.slice(i-1, ((typeof j === "undefined")? tab.length : j) - 1 );
+      }
       return [tab.join(joiner)];
     },
     insert: function (tab, value) {
