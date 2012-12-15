@@ -151,7 +151,7 @@ var string = {
     return bytes;
   },
   char: function () {
-    throw new Error("TODO: implement string.char");
+    return [ String.fromCharCode.apply ( null , arguments ) ];
   },
   dump: function () {
     throw new Error("TODO: implement string.dump");
