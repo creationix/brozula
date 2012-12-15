@@ -170,11 +170,11 @@ var _G = {
   table: {
     concat: function (tab, joiner, i , j) {
       if (!(tab && typeof tab === "object")) throw "table expected";
-      if (!Array.isArray(tab)) return [""];
+      var slice = tab.array;
       if (arguments.length >= 3 ) {
-        tab = tab.slice(i-1, ((typeof j === "undefined")? tab.length : j) - 1 );
+        slice = slice.slice(i, ((typeof j === "undefined")? slice.length : j) );
       }
-      return [tab.join(joiner)];
+      return [slice.join(joiner)];
     },
     insert: function (tab, value) {
       if (!(tab && typeof tab === "object")) throw "table expected";
