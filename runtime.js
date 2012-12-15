@@ -75,10 +75,10 @@ Table.prototype.next = function (key) {
     if (isNil) key = -1;
     for (var i = key + 1, l = this.array.length; i < l; i++) {
       v = this.array[i];
-      if (v !== undefined) return [i, v];
+      if (type(v) != "nil") return [i, v];
     }
     v = this.keys[0];
-    if (v !== undefined) {
+    if (type(v) != "nil") {
       return [v, this.values[0]];
     }
     key = null;
