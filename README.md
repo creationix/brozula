@@ -120,6 +120,10 @@ switch(t){case"0":r=u.bind(Object.create(this)),this.closure=[r],t="2";break;cas
 var i={type:r,setmetatable:e,print:n,assert:o,error:a};return c.apply(i,arguments)})();
 ```
 
+## License
+
+Brozula is licensed under the MIT license.
+
 [luvit]: http://luvit.io/
 [moonslice]: https://github.com/creationix/moonslice-luv
 [luv]: https://github.com/creationix/luv
