@@ -15,10 +15,11 @@ function Closure(proto, parent) {
   this.parent = parent;
   this.multires = undefined;
 }
-Function.prototype.toString = function () { return require('util').inspect(this); };
+//Function.prototype.toString = function () { return inspect(this); };
 Closure.prototype.execute = function (env, args) {
   this.pc = 0; // Program Counter
   this.env = env; // global environment
+  runtime = runtime || window.brozula.runtime;
   this.vararg = Array.prototype.slice.call(args, this.numparams);
   this.slots = new Array(this.framesize); // vm registers
   for (var i = 0, l = this.numparams; i < l; i++) {
@@ -329,8 +330,9 @@ Closure.prototype.FUNCCW = function (a) {
   throw new Error("TODO: Implement FUNCCW");
 };
 
-return {
-  Closure: Closure
+return (proto, parent, env) => {
+  const c = new Closure(proto[parent], env);
+  return c.toFunction(window.brozula.globals);
 };
 
 });
