@@ -78,12 +78,14 @@ var options = nopt({
   "serve": Number,
   "execute": Boolean,
   "print": Boolean,
+  "json": Boolean,
   "uglify": Boolean,
   "beautify": Boolean,
   "lines": Boolean
 }, {
   "x": ["--execute"],
   "p": ["--print"],
+  "j": ["--json"],
   "u": ["--uglify"],
   "b": ["--beautify"],
   "l": ["--lines"]
@@ -145,7 +147,7 @@ if (options.serve) {
 else {
 
   // Default to running if not specified
-  if (options.execute === undefined && !options.print) {
+  if (options.execute === undefined && !options.print && !options.json) {
     options.execute = true;
   }
 
@@ -160,6 +162,7 @@ else {
       "Examples:",
       "  brozula myprogram.lua",
       "  brozula --print myprogram.lua",
+      "  brozula --json myprogram.lua",
       "  brozula -pb myprogram.luax",
       "",
       " Main operation mode:",
@@ -167,6 +170,7 @@ else {
       "  -x, --execute          Execute the generated javascript",
       "                         (This is the default behavior)",
       "  -p, --print            Print the generated javascript",
+      "  -j, --json             Print the generated javascript as JSON",
       "  --serve port           Serve the current folder over HTTP auto-compiling",
       "                         any lua scripts requested",
       "",
@@ -184,7 +188,9 @@ else {
   filename = pathResolve(process.cwd(), filename);
   compile(filename, function (err, protos) {
     if (err) throw err;
-    if (options.print) {
+    if (options.json) {
+      console.log(options.beautify ? JSON.stringify(protos, null, 2) : JSON.stringify(protos));
+    } else if (options.print) {
       console.log(require('util').inspect(protos, false, 3 + (options.beautify ? 2 : 0), true) + "\n");
     }
     if (options.execute) {
