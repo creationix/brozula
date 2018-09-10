@@ -168,15 +168,25 @@ var _G = {
   },
   string: runtime.string,
   table: {
-    concat: function (tab, joiner) {
+    concat: function (tab, joiner, i , j) {
       if (!(tab && typeof tab === "object")) throw "table expected";
-      if (!Array.isArray(tab)) return [""];
-      return [tab.join(joiner)];
+      var slice = tab.array;
+      if (arguments.length >= 3 ) {
+        slice = slice.slice(i, ((typeof j === "undefined")? slice.length : j) );
+      }
+      return [slice.join(joiner)];
     },
-    insert: function (tab, value) {
+    insert: function (tab) {
       if (!(tab && typeof tab === "object")) throw "table expected";
-      if (!Array.isArray(tab)) throw "TODO: Implement insert on non-array tables";
-      tab.push(value);
+      var pos, val;
+      if (arguments.length <= 2) {
+        pos = tab.array.length+1;
+        val = arguments[1];
+      } else {
+        pos = arguments[1];
+        val = arguments[2];
+      }
+      tab.array.splice( pos, 0, val );
       return [];
     },
     sort: function (tab, cmp) {
@@ -185,6 +195,13 @@ var _G = {
         return cmp(a, b)[0] ? 1 : -1;
       });
       return [];
+    },
+    remove: function (tab,pos) {
+      if (!(tab && typeof tab === "object")) throw "table expected";
+      if (arguments.length == 1) {
+        pos = 1;
+      }
+      return tab.array.splice( pos, 1 );
     }
   },
   tonumber: function tonumber(val, base) {
